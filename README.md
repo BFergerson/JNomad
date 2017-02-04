@@ -24,7 +24,7 @@ JNomad is a utility for scanning Java source code bases for HQL/SQL queries whic
 -version, --version        Displays version information (default: false)
 ```
 
-##### Example Usage
+### Example
 ```bat
 java -jar JNomadCLI.jar -db_host localhost -db_username postgres -db_password postgres -db_database postgres -scan_directory C:\MyWorkspace\MyJavaProject
 ```
