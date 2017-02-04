@@ -38,7 +38,7 @@ http://www.codebrig.com/public_files/JNomad/JNomadCLI.zip
 ```sh
 java -jar JNomadCLI.jar -scan_directory C:\MyWorkspace\MyJavaProject -db_host localhost -db_username postgres -db_password postgres -db_database postgres
 ```
-##### Example 1
+##### Example 2
 - Scan "C:\MyWorkspace\MyJavaProject"
 - Run explains against databases "postgresql://localhost:5432/postgres" & "postgresql://localhost:5432/postgres2"
 ```sh
