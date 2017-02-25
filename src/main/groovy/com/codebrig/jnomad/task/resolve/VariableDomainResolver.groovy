@@ -14,6 +14,7 @@ import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.javaparsermodel.UnsolvedSymbolException
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserFieldDeclaration
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserMethodDeclaration
+import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserParameterDeclaration
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserSymbolDeclaration
 import com.github.javaparser.symbolsolver.model.resolution.SymbolReference
 import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
@@ -48,15 +49,21 @@ class VariableDomainResolver {
             //todo: in CampaignSynchronizer search for hql field and notice there is no assign; determine as dynamic
             //look everywhere
             parent = Navigator.demandCompilationUnit(variableDeceleration)
-            variableLocation = Navigator.findClassOrInterfaceDeclarationExpression(variableDeceleration).getName()
+            variableLocation = CodeLocator.findClassOrInterfaceDeclarationExpression(variableDeceleration).getName()
         } else {
+            if (queryStringDeclaration instanceof JavaParserParameterDeclaration) {
+                //can't solve method parameter; default to dynamic
+                def resolvedVariable = new ResolvedVariable()
+                resolvedVariable.dynamicVariable = dynamicVariable = true
+                return resolvedVariable
+            }
             JavaParserSymbolDeclaration symbolDeclaration = (JavaParserSymbolDeclaration) queryStringDeclaration
             variableDeceleration = (VariableDeclarator) symbolDeclaration.wrappedNode
 
             //look everywhere in parent method
             //todo: prior to query use
-            def methodDeclaration = parent = Navigator.getParentMethodDeclerationExpression(variableDeceleration)
-            variableLocation = Navigator.findClassOrInterfaceDeclarationExpression(
+            def methodDeclaration = parent = CodeLocator.getParentMethodDeclarationExpression(variableDeceleration)
+            variableLocation = CodeLocator.findClassOrInterfaceDeclarationExpression(
                     variableDeceleration).getName() + "." + methodDeclaration.getName() + "()"
         }
 
@@ -64,7 +71,7 @@ class VariableDomainResolver {
 
         boolean combineStringLiterals = true
         //loop any method calls in query string declaration
-        def methodCalls = Navigator.getMethodCalls(variableDeceleration)
+        def methodCalls = CodeLocator.getMethodCalls(variableDeceleration)
         if (methodCalls.empty && variableDeceleration.init.present) {
             //no method calls in query string deceleration; must be string literal (with or without concatenation)
             def initExpression = variableDeceleration.init.get()
@@ -137,7 +144,7 @@ class VariableDomainResolver {
                     if (childNode instanceof BinaryExpr) {
                         //variable declared by binary expression (containing method call)
                         //todo: and append/add binary
-                        boolean isConcreteClass = !Navigator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
+                        boolean isConcreteClass = !CodeLocator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
                         if (isConcreteClass) {
                             StringLiteralExpr stringLiteral = StringLiteralConcatenator.concatStringLiteral(
                                     childNode, methodDeclaration.wrappedNode, javaParserFacade)
@@ -160,7 +167,7 @@ class VariableDomainResolver {
                         }
                     } else if (childNode instanceof MethodCallExpr) {
                         //variable declared by method call alone
-                        boolean isConcreteClass = !Navigator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
+                        boolean isConcreteClass = !CodeLocator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
                         if (isConcreteClass) {
                             StringLiteralExpr stringLiteral = StringLiteralConcatenator.determineStringLiteral(
                                     methodDeclaration.wrappedNode, javaParserFacade)
@@ -196,7 +203,7 @@ class VariableDomainResolver {
             //todo: only assigns before query call
             AssignExpr expr
             def exprList = new ArrayList<AssignExpr>()
-            while ((expr = Navigator.findAssignExpressionToTarget(parent, queryStringDeclaration, exprList)) != null) {
+            while ((expr = CodeLocator.findAssignExpressionToTarget(parent, queryStringDeclaration, exprList)) != null) {
                 Expression value = expr.value
                 if (value instanceof StringLiteralExpr) {
                     stringLiteralList.add(value)
@@ -238,7 +245,7 @@ class VariableDomainResolver {
                     //initial value by method call
                     SymbolReference symbolReference = javaParserFacade.solve(expression)
                     JavaParserMethodDeclaration methodDeclaration = (JavaParserMethodDeclaration) symbolReference.correspondingDeclaration
-                    boolean isConcreteClass = !Navigator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
+                    boolean isConcreteClass = !CodeLocator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
                     if (isConcreteClass) {
                         StringLiteralExpr stringLiteral = StringLiteralConcatenator.determineStringLiteral(methodDeclaration.wrappedNode, javaParserFacade)
                         for (List<StringLiteralExpr> innerPossibleList : innerPossibleSet) {
@@ -263,7 +270,7 @@ class VariableDomainResolver {
             }
         }
 
-        def list = Navigator.getStringBuilderInitAndAppendMethodCalls(parent, queryStringDeceleration.name)
+        def list = CodeLocator.getStringBuilderInitAndAppendMethodCalls(parent, queryStringDeceleration.name)
 
         //find init/assign
         def initExpr = null
@@ -333,7 +340,7 @@ class VariableDomainResolver {
                 }
 
                 JavaParserMethodDeclaration methodDeclaration = (JavaParserMethodDeclaration) symbolReference.correspondingDeclaration
-                boolean isConcreteClass = !Navigator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
+                boolean isConcreteClass = !CodeLocator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
                 if (isConcreteClass) {
                     StringLiteralExpr stringLiteral = StringLiteralConcatenator.determineStringLiteral(methodDeclaration.wrappedNode, javaParserFacade)
                     for (List<StringLiteralExpr> innerPossibleList : innerPossibleSet) {
@@ -356,7 +363,7 @@ class VariableDomainResolver {
                 }
             } else if (inner instanceof BinaryExpr) {
                 //someone is doing string concatenation inside of an append method :/
-                if (Navigator.isFullyStringLiteral(inner)) {
+                if (StringLiteralConcatenator.isFullyStringLiteral(inner)) {
                     for (List<StringLiteralExpr> innerPossibleList : innerPossibleSet) {
                         innerPossibleList.add(StringLiteralConcatenator.handleFullyStringLiteral(inner))
                     }

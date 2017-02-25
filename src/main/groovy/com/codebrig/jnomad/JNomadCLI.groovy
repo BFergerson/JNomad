@@ -9,10 +9,7 @@ import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
 import com.codebrig.jnomad.task.parse.QueryParser
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresQueryReport
 import com.codebrig.jnomad.utils.CodeLocator
-import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JreTypeSolver
 import com.google.common.base.MoreObjects
 import com.google.common.collect.ImmutableList
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
@@ -260,8 +257,8 @@ class JNomadCLI {
         }
 
         //setup main type solver
-        CombinedTypeSolver typeSolver = new CombinedTypeSolver()
-        typeSolver.add(new ReflectionTypeSolver())
+        SourceCodeTypeSolver typeSolver = new SourceCodeTypeSolver()
+        typeSolver.add(new JreTypeSolver())
 
         //.jar files
         def f = new File(JNomadCLI.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath())
@@ -270,9 +267,9 @@ class JNomadCLI {
             if (path.startsWith("file:/")) {
                 path = path.substring(6)
             }
-            typeSolver.add(new JarTypeSolver(path))
+            typeSolver.addJarTypeSolver(path)
         } else {
-            typeSolver.add(new JarTypeSolver(f.absolutePath))
+            typeSolver.addJarTypeSolver(f.absolutePath)
         }
 
         //.Java source directories
@@ -438,14 +435,15 @@ class JNomadCLI {
         return sb.toString()
     }
 
-    private static void addJarTypeSolver(CombinedTypeSolver typeSolver, String jarLocation) {
-        typeSolver.add(new JarTypeSolver(jarLocation))
+    private static
+    void addJarTypeSolver(SourceCodeTypeSolver typeSolver, String jarLocation) {
+        typeSolver.addJarTypeSolver(jarLocation)
         println "Added .jar library to classpath: " + jarLocation
     }
 
-    private
-    static void addJavaParserTypeSolver(CombinedTypeSolver typeSolver, String sourceDirectoryLocation, boolean autoScan) {
-        typeSolver.add(new JavaParserTypeSolver(new File(sourceDirectoryLocation)))
+    private static
+    void addJavaParserTypeSolver(SourceCodeTypeSolver typeSolver, String sourceDirectoryLocation, boolean autoScan) {
+        typeSolver.addJavaParserTypeSolver(new File(sourceDirectoryLocation))
         if (autoScan) {
             println "Added source code directory (auto-scan): " + sourceDirectoryLocation
         } else {

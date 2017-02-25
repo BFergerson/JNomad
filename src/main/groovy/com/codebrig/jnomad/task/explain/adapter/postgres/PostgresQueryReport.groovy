@@ -13,7 +13,6 @@ import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
-import com.github.javaparser.symbolsolver.javaparser.Navigator
 import net.sf.jsqlparser.statement.Statement
 import org.postgresql.util.PSQLException
 
@@ -96,12 +95,12 @@ class PostgresQueryReport extends QueryIndexReport {
                 //column aliases
                 def queryColumnDataType = visitor.queryColumnDataTypeExtractor
                 if (!queryColumnDataType.columnDataTypeMap.isEmpty()) {
-                    def classExtendsPath = CodeLocator.locateClassExtensionPath(Navigator.findClassOrInterfaceDeclarationExpression(queryColumnDataType.compilationUnit.types.get(0)))
+                    def classExtendsPath = CodeLocator.locateClassExtensionPath(CodeLocator.findClassOrInterfaceDeclarationExpression(queryColumnDataType.compilationUnit.types.get(0)))
                     if (!classExtendsPath.isEmpty()) {
                         classExtendsPath.each {
                             ClassOrInterfaceDeclaration declaration = CodeLocator.locateClassOrInterfaceDeclaration(jNomad.typeSolver, it)
                             if (declaration != null) {
-                                CompilationUnit unit = Navigator.demandCompilationUnit(declaration)
+                                CompilationUnit unit = CodeLocator.demandCompilationUnit(declaration)
                                 def qualifiedName = ""
                                 if (unit.package.isPresent()) {
                                     qualifiedName = unit.package.get().name.qualifiedName + "." + declaration.name

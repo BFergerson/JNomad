@@ -98,12 +98,12 @@ class QueryParser {
             //column aliases
             def queryColumnAlias = visitor.queryColumnAliasExtractor
             if (!queryColumnAlias.columnNameAliasMap.isEmpty()) {
-                def classExtendsPath = CodeLocator.locateClassExtensionPath(Navigator.findClassOrInterfaceDeclarationExpression(queryColumnAlias.compilationUnit.types.get(0)))
+                def classExtendsPath = CodeLocator.locateClassExtensionPath(CodeLocator.findClassOrInterfaceDeclarationExpression(queryColumnAlias.compilationUnit.types.get(0)))
                 if (!classExtendsPath.isEmpty()) {
                     classExtendsPath.each {
                         ClassOrInterfaceDeclaration declaration = CodeLocator.locateClassOrInterfaceDeclaration(jNomad.typeSolver, it)
                         if (declaration != null) {
-                            CompilationUnit unit = Navigator.demandCompilationUnit(declaration)
+                            CompilationUnit unit = CodeLocator.demandCompilationUnit(declaration)
                             def qualifiedName = ""
                             if (unit.package.isPresent()) {
                                 qualifiedName = unit.package.get().name.qualifiedName + "." + declaration.name

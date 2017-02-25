@@ -1,17 +1,27 @@
 package com.codebrig.jnomad.utils
 
 import com.codebrig.jnomad.JNomad
+import com.codebrig.jnomad.SourceCodeTypeSolver
 import com.codebrig.jnomad.model.SourceCodeExtract
 import com.github.javaparser.ParseProblemException
+import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
+import com.github.javaparser.ast.body.VariableDeclarator
+import com.github.javaparser.ast.expr.AssignExpr
+import com.github.javaparser.ast.expr.Expression
+import com.github.javaparser.ast.expr.FieldAccessExpr
+import com.github.javaparser.ast.expr.MethodCallExpr
+import com.github.javaparser.ast.expr.NameExpr
 import com.github.javaparser.ast.type.ClassOrInterfaceType
 import com.github.javaparser.symbolsolver.javaparser.Navigator
 import com.github.javaparser.symbolsolver.javaparsermodel.UnsolvedSymbolException
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserClassDeclaration
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserMethodDeclaration
 import com.github.javaparser.symbolsolver.javassistmodel.JavassistClassDeclaration
+import com.github.javaparser.symbolsolver.model.declarations.Declaration
 import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
+import com.github.javaparser.ast.Node
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -25,14 +35,160 @@ class CodeLocator {
 
     private static Map<String, List<MethodDeclaration>> methodImplementationCache = new ConcurrentHashMap<>()
 
-    static List<MethodDeclaration> locateMethodImplementations(TypeSolver typeSolver, JavaParserMethodDeclaration methodDeclaration) {
+    static AssignExpr findAssignExpressionToTarget(Node node, Declaration targetDecleration, List<AssignExpr> exclusionList) {
+        if (exclusionList == null) { exclusionList = new ArrayList<>() }
+        if (node instanceof AssignExpr) {
+            AssignExpr assignExpr = (AssignExpr) node
+            NameExpr nameExpr = null
+            if (assignExpr.getTarget() instanceof NameExpr && !targetDecleration.isField()) {
+                nameExpr = (NameExpr) assignExpr.getTarget()
+            } else if (assignExpr.getTarget() instanceof FieldAccessExpr && targetDecleration.isField()) {
+                nameExpr = ((FieldAccessExpr) assignExpr.getTarget()).getFieldExpr()
+            }
+
+            boolean exclude = false
+            for (AssignExpr expr : exclusionList) {
+                if (nameExpr != null && nameExpr.getName().equals(targetDecleration.getName())) {
+                    if (expr.equals(assignExpr) && expr.getRange().equals(assignExpr.getRange())) {
+                        exclude = true
+                    }
+                }
+            }
+            if (nameExpr != null && nameExpr.getName().equals(targetDecleration.getName()) && !exclude) {
+                exclusionList.add(assignExpr)
+                return assignExpr
+            }
+        }
+        for (Node child : node.getChildrenNodes()) {
+            AssignExpr res = findAssignExpressionToTarget(child, targetDecleration, exclusionList)
+            if (res != null) {
+                return res
+            }
+        }
+        return null
+    }
+
+    static List<Node> getStringBuilderInitAndAppendMethodCalls(Node node, String stringBuilderName) {
+        boolean checkChildren = true
+        List<Node> foundList = new ArrayList<>()
+        if (node instanceof VariableDeclarator) {
+            VariableDeclarator variableDeclarator = (VariableDeclarator) node
+            if (stringBuilderName.equals(variableDeclarator.getId().getName())) {
+                foundList.add(variableDeclarator)
+            }
+        } else if (node instanceof AssignExpr) {
+            AssignExpr assignExpr = (AssignExpr) node
+            if (assignExpr.getTarget() instanceof NameExpr) {
+                NameExpr nameExpr = (NameExpr) assignExpr.getTarget()
+                if (nameExpr.getName().equals(stringBuilderName)) {
+                    foundList.add(assignExpr)
+                }
+            }
+        } else if (node instanceof MethodCallExpr) {
+            MethodCallExpr methodCallExpr = (MethodCallExpr) node
+            if (methodCallExpr.getName().equals("append") &&  methodCallExpr.getScope().isPresent()) {
+                if (methodCallExpr.getScope().get() instanceof MethodCallExpr) {
+                    //stacked appends; add to found foundList in reverse order
+                    List<Expression> tmpList = new ArrayList<>()
+                    tmpList.add((Expression) methodCallExpr.getArgs().getChildrenNodes().get(0))
+                    MethodCallExpr methodCall = methodCallExpr
+
+                    //todo: fix do-while hack
+                    methodCall = (MethodCallExpr) methodCall.getScope().get()
+                    tmpList.add((Expression) methodCall.getArgs().getChildrenNodes().get(0))
+                    while (methodCall.getScope().isPresent() && methodCall.getScope().get() instanceof MethodCallExpr) {
+                        methodCall = (MethodCallExpr) methodCall.getScope().get()
+                        tmpList.add((Expression) methodCall.getArgs().getChildrenNodes().get(0))
+                    }
+
+                    //now check name; if it's what we're looking for add to foundList in reverse
+                    //no need to check children as we've handled the chain
+                    NameExpr nameExpr = (NameExpr) methodCall.getScope().get()
+                    if (nameExpr.getName().equals(stringBuilderName)) {
+                        Collections.reverse(tmpList)
+                        foundList.addAll(tmpList)
+                        checkChildren = false
+                    }
+                } else {
+                    NameExpr nameExpr = (NameExpr) methodCallExpr.getScope().get()
+                    if (nameExpr.getName().equals(stringBuilderName)) {
+                        Node n = methodCallExpr.getArgs()
+                        foundList.add(n.getChildrenNodes().get(0))
+                    }
+                }
+            }
+        }
+
+        if (checkChildren) {
+            for (Node child : node.getChildrenNodes()) {
+                foundList.addAll(getStringBuilderInitAndAppendMethodCalls(child, stringBuilderName))
+            }
+        }
+        return foundList
+    }
+
+    static List<MethodCallExpr> getMethodCalls(Node node) {
+        List<MethodCallExpr> methodCallExprList = new ArrayList<>()
+        if (node instanceof MethodCallExpr) {
+            MethodCallExpr methodCallExpr = (MethodCallExpr) node
+            methodCallExprList.add(methodCallExpr)
+        }
+        for (Node child : node.getChildrenNodes()) {
+            methodCallExprList.addAll(getMethodCalls(child))
+        }
+        return methodCallExprList
+    }
+
+    static MethodDeclaration getParentMethodDeclarationExpression(Node node) {
+        if (node == null) {
+            return null
+        } else if (node instanceof MethodDeclaration) {
+            return (MethodDeclaration) node
+        }
+
+        MethodDeclaration res = getParentMethodDeclarationExpression(node.getParentNode())
+        if (res != null) {
+            return res
+        }
+        return null
+    }
+
+    static CompilationUnit demandCompilationUnit(Node node) {
+        if (node == null) {
+            return null
+        } else if (node instanceof CompilationUnit) {
+            return (CompilationUnit) node
+        }
+
+        CompilationUnit res = demandCompilationUnit(node.getParentNode())
+        if (res != null) {
+            return res
+        }
+        return null
+    }
+
+    static ClassOrInterfaceDeclaration findClassOrInterfaceDeclarationExpression(Node node) {
+        if (node == null) {
+            return null
+        } else if (node instanceof ClassOrInterfaceDeclaration) {
+            return (ClassOrInterfaceDeclaration) node
+        }
+
+        ClassOrInterfaceDeclaration res = findClassOrInterfaceDeclarationExpression(node.getParentNode())
+        if (res != null) {
+            return res
+        }
+        return null
+    }
+
+    static List<MethodDeclaration> locateMethodImplementations(SourceCodeTypeSolver typeSolver, JavaParserMethodDeclaration methodDeclaration) {
         def qualifiedName = methodDeclaration.declaringType().qualifiedName
         def implMethodList = new ArrayList<>()
         if (methodImplementationCache.containsKey(qualifiedName + "." + methodDeclaration.name)) {
             implMethodList.addAll(methodImplementationCache.get(qualifiedName + "." + methodDeclaration.name))
         } else {
             def abstractClass = typeSolver.solveType(qualifiedName)
-            def classList = typeSolver.allDefinedClassNames
+            def classList = typeSolver.definedClassNames
 
             for (String str : classList) {
                 if (str.startsWith("javax.") || str.startsWith("java.") || str.startsWith("javassist.")) {
@@ -47,7 +203,7 @@ class CodeLocator {
                 try {
                     if (solvedType.isClass() && solvedType.canBeAssignedTo(abstractClass)
                             && solvedType instanceof JavaParserClassDeclaration) {
-                        def implMethodDeceleration = Navigator.findMethodDeclarationExpression(
+                        def implMethodDeceleration = findMethodDeclarationExpression(
                                 solvedType.wrappedNode, methodDeclaration.name)
                         implMethodList.add(implMethodDeceleration)
                     }
@@ -60,9 +216,25 @@ class CodeLocator {
         return implMethodList
     }
 
-    static ClassOrInterfaceDeclaration locateClassOrInterfaceDeclaration(TypeSolver typeSolver, ClassOrInterfaceType classOrInterfaceType) {
+    static MethodDeclaration findMethodDeclarationExpression(Node node, String name) {
+        if (node instanceof MethodDeclaration) {
+            MethodDeclaration nameExpr = (MethodDeclaration) node
+            if (nameExpr.getName() != null && nameExpr.getName().equals(name)) {
+                return nameExpr
+            }
+        }
+        for (Node child : node.getChildrenNodes()) {
+            MethodDeclaration res = findMethodDeclarationExpression(child, name)
+            if (res != null) {
+                return res
+            }
+        }
+        return null
+    }
+
+    static ClassOrInterfaceDeclaration locateClassOrInterfaceDeclaration(SourceCodeTypeSolver typeSolver, ClassOrInterfaceType classOrInterfaceType) {
         try {
-            def classList = typeSolver.allDefinedClassNames
+            def classList = typeSolver.definedClassNames
             for (String str : classList) {
                 if (str.startsWith("javax.") || str.startsWith("java.") || str.startsWith("javassist.")) {
                     continue //don't need to check core Java classes

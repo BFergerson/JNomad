@@ -212,12 +212,15 @@ class HQLTableJoinTransformer extends HierarchicalHQLVisitor {
             rightTableName = queryReport.getSQLTableName(rightTableName)
             strParts[i] = rightTableName
 
-            def joinSourceExtract = CodeLocator.getJPATableSourceCodeExtract(queryReport.jNomad, rightTableName)
-            if (joinSourceExtract == null) {
+            def rightTableExtract = CodeLocator.getJPATableSourceCodeExtract(queryReport.jNomad, rightTableName)
+            if (rightTableExtract == null) {
                 if (leftTableExtract != null && leftTableExtract.queryColumnAliasExtractor.columnNameAliasMap.containsKey(rightTableName)) {
                     rightTableName = leftTableName
                     leftTableName = tableName
-                } else if (leftTableName != null) {
+                    rightTableExtract = CodeLocator.getJPATableSourceCodeExtract(queryReport.jNomad, rightTableName)
+                }
+
+                if (rightTableExtract == null && leftTableName != null) {
                     //make sure isn't embeddable of main table
                     if (tableName == leftTableName && (i + 1) < strParts.length) {
                         leftTableName = rightTableName
@@ -242,7 +245,7 @@ class HQLTableJoinTransformer extends HierarchicalHQLVisitor {
                             if (tableExtract != null && tableExtract.queryColumnAliasExtractor.columnNameAliasMap.containsKey(rightTableName)) {
                                 leftTableName = tableName
                                 rightTableName = joinTableName
-                                joinSourceExtract = tableExtract
+                                rightTableExtract = tableExtract
                             } else {
                                 throw new HQLTransformException("Failed HQL join translation on query: "
                                         + ObjectUtils.firstNonNull(plainSelect, plainUpdate, plainDelete))
@@ -259,7 +262,7 @@ class HQLTableJoinTransformer extends HierarchicalHQLVisitor {
                         throw new HQLTransformException("Failed HQL join translation on query: "
                                 + ObjectUtils.firstNonNull(plainSelect, plainUpdate, plainDelete))
                     }
-                } else {
+                } else if (rightTableExtract == null) {
                     throw new HQLTransformException("Failed HQL join translation on query: "
                             + ObjectUtils.firstNonNull(plainSelect, plainUpdate, plainDelete))
                 }
@@ -270,14 +273,14 @@ class HQLTableJoinTransformer extends HierarchicalHQLVisitor {
             def embeddedFound = false
             while ((i + 1) < strParts.length) {
                 possibleEmbeddableExtract = CodeLocator.getJPAEmbeddableSourceCodeExtract(
-                        queryReport.jNomad, joinSourceExtract.queryColumnJoinExtractor.embeddedJoinTableTypeMap.get(strParts[i + 1]))
+                        queryReport.jNomad, rightTableExtract.queryColumnJoinExtractor.embeddedJoinTableTypeMap.get(strParts[i + 1]))
 
                 if (possibleEmbeddableExtract != null) {
                     embeddedFound = true
                     i++
-                    joinSourceExtract = possibleEmbeddableExtract
+                    rightTableExtract = possibleEmbeddableExtract
                 } else {
-                    if (embeddedFound) possibleEmbeddableExtract = joinSourceExtract
+                    if (embeddedFound) possibleEmbeddableExtract = rightTableExtract
                     break
                 }
             }
