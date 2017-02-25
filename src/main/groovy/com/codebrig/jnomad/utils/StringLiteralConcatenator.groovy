@@ -6,7 +6,6 @@ import com.github.javaparser.ast.body.MethodDeclaration
 import com.github.javaparser.ast.expr.*
 import com.github.javaparser.ast.stmt.ReturnStmt
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter
-import com.github.javaparser.symbolsolver.javaparser.Navigator
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserMethodDeclaration
 import com.github.javaparser.symbolsolver.model.resolution.SymbolReference
@@ -167,7 +166,7 @@ class StringLiteralConcatenator {
             if (expression instanceof MethodCallExpr) {
                 SymbolReference test2 = javaParserFacade.solve(expression)
                 JavaParserMethodDeclaration methodDeclaration = (JavaParserMethodDeclaration) test2.correspondingDeclaration
-                boolean isConcreteClass = !Navigator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
+                boolean isConcreteClass = !CodeLocator.findClassOrInterfaceDeclarationExpression(methodDeclaration.wrappedNode).interface
                 if (isConcreteClass) {
                     StringLiteralExpr stringLiteral = determineStringLiteral(methodDeclaration.wrappedNode, javaParserFacade)
                     concatStringLiteralList.add(stringLiteral)

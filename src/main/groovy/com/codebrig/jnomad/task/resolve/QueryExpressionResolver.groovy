@@ -3,7 +3,6 @@ package com.codebrig.jnomad.task.resolve
 import com.codebrig.jnomad.utils.CodeLocator
 import com.codebrig.jnomad.utils.StringLiteralConcatenator
 import com.github.javaparser.ast.expr.*
-import com.github.javaparser.symbolsolver.javaparser.Navigator
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserMethodDeclaration
 import com.github.javaparser.symbolsolver.model.declarations.MethodDeclaration
@@ -55,7 +54,7 @@ class QueryExpressionResolver {
                         possibleDynamicQueries.addAll(variableResolver.possibleDynamicQueryList)
                     }
                 } else {
-                    for (def inner : Navigator.getMethodCalls(stringExpression)) {
+                    for (def inner : CodeLocator.getMethodCalls(stringExpression)) {
                         //todo: how does below work and what does it do
                         SymbolReference test2 = javaParserFacade.solve(inner)
                         JavaParserMethodDeclaration methodDeclaration = (JavaParserMethodDeclaration) test2.correspondingDeclaration
@@ -86,12 +85,12 @@ class QueryExpressionResolver {
             possibleQueries.add(StringLiteralConcatenator.handleFullyStringLiteral(stringExpression))
         } else {
             //may involve variables/methods
-            for (def inner : Navigator.getMethodCalls(stringExpression)) {
+            for (def inner : CodeLocator.getMethodCalls(stringExpression)) {
                 SymbolReference test2 = javaParserFacade.solve(inner)
                 if (test2.correspondingDeclaration instanceof JavaParserMethodDeclaration) {
                     JavaParserMethodDeclaration methodDeclaration = (JavaParserMethodDeclaration) test2.correspondingDeclaration
 
-                    boolean isConcreteClass = !Navigator.findClassOrInterfaceDeclarationExpression(methodDeclaration.getWrappedNode()).isInterface()
+                    boolean isConcreteClass = !CodeLocator.findClassOrInterfaceDeclarationExpression(methodDeclaration.getWrappedNode()).isInterface()
                     if (isConcreteClass) {
                         StringLiteralExpr stringLiteral = StringLiteralConcatenator.concatStringLiteral(
                                 stringExpression, methodDeclaration.getWrappedNode(), javaParserFacade)
