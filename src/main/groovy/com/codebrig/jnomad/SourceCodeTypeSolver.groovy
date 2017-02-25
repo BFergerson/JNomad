@@ -88,11 +88,6 @@ class SourceCodeTypeSolver extends CombinedTypeSolver {
         return new ArrayList<>(definedClassNameList)
     }
 
-    @Override
-    void add(TypeSolver typeSolver) {
-        super.add(typeSolver)
-    }
-
     private static String entryPathToClassName(String entryPath) {
         if (!entryPath.endsWith(".class")) {
             throw new IllegalStateException()
