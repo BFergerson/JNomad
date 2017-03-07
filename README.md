@@ -1,4 +1,6 @@
-## JNomad - Java Source Code Query Scanner / Index Recommender
+Java Source Code Query Scanner / Index Recommender
+==================================
+[![Build Status](https://travis-ci.org/BFergerson/JNomad.svg?branch=master)](https://travis-ci.org/BFergerson/JNomad)
 
 JNomad is a utility for scanning Java source code bases for HQL/SQL queries which are then ran as an explain statement against a PostgreSQL database to determine the most inefficent queries and indexes that would make them more efficent.
 
