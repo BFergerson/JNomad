@@ -19,6 +19,7 @@ class QueryTableAliasExtractor extends NomadExtractor {
 
     private Map<String, String> tableNameAliasMap = new HashMap<>()
     private boolean embeddableTable
+    private String extractorName = getClass().name
 
     QueryTableAliasExtractor(CompilationUnit compilationUnit, File sourceFile, TypeSolver typeSolver, DB db) {
         super(compilationUnit, sourceFile, typeSolver, db)
@@ -26,7 +27,7 @@ class QueryTableAliasExtractor extends NomadExtractor {
 
     @Override
     String getName() {
-        return getClass().name
+        return extractorName
     }
 
     @Override
@@ -77,7 +78,7 @@ class QueryTableAliasExtractor extends NomadExtractor {
         return embeddableTable
     }
 
-    void scan(SourceCodeExtract sourceCodeExtract) {
+    void scan(SourceCodeExtract sourceCodeExtract, CompilationUnit compilationUnit) {
         //todo: probably a better way but for now just look for javax.persistence import
         for (ImportDeclaration importDeclaration : compilationUnit.imports) {
             if (importDeclaration.toStringWithoutComments().contains("javax.persistence")) {

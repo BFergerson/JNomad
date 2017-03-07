@@ -1,7 +1,9 @@
 package com.codebrig.jnomad.task.extract
 
 import com.codebrig.jnomad.model.SourceCodeExtract
+import com.codebrig.jnomad.utils.CodeLocator
 import com.github.javaparser.ast.CompilationUnit
+import com.github.javaparser.ast.type.ClassOrInterfaceType
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter
 import com.github.javaparser.symbolsolver.javaparsermodel.JavaParserFacade
 import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
@@ -17,13 +19,13 @@ abstract class NomadExtractor extends VoidVisitorAdapter<JavaParserFacade> {
 
     public final File sourceFile
     public final TypeSolver typeSolver
-    public CompilationUnit compilationUnit
     private String qualifiedClassName
     protected final DB cache
     protected boolean skipScan
+    private String fileChecksum
+    private List<ClassOrInterfaceType> extendsClassPath
 
     NomadExtractor(CompilationUnit compilationUnit, File sourceFile, TypeSolver typeSolver, DB cache) {
-        this.compilationUnit = compilationUnit
         this.sourceFile = Objects.requireNonNull(sourceFile)
         this.typeSolver = Objects.requireNonNull(typeSolver)
         this.cache = cache
@@ -32,6 +34,18 @@ abstract class NomadExtractor extends VoidVisitorAdapter<JavaParserFacade> {
         if (compilationUnit.package.isPresent()) {
             qualifiedClassName = compilationUnit.package.get().name.qualifiedName + "." + qualifiedClassName
         }
+
+        extendsClassPath = new ArrayList<>()
+        if (compilationUnit.types != null && !compilationUnit.types.isEmpty()) {
+            def classDeclaration = CodeLocator.findClassOrInterfaceDeclarationExpression(compilationUnit.types.get(0))
+            if (classDeclaration != null) {
+                extendsClassPath.addAll(CodeLocator.locateClassExtensionPath(classDeclaration))
+            }
+        }
+    }
+
+    List<ClassOrInterfaceType> getExtendsClassPath() {
+        return extendsClassPath
     }
 
     String getQualifiedClassName() {
@@ -43,7 +57,7 @@ abstract class NomadExtractor extends VoidVisitorAdapter<JavaParserFacade> {
     }
 
     String getFileCrc32() {
-        Files.hash(sourceFile, Hashing.crc32())
+        return Files.hash(sourceFile, Hashing.crc32())
     }
 
     long getFileSize() {
@@ -51,14 +65,17 @@ abstract class NomadExtractor extends VoidVisitorAdapter<JavaParserFacade> {
     }
 
     String getFileChecksum() {
-        return getFileCrc32() + "-" + getFileSize() + className
+        if (fileChecksum == null) {
+            fileChecksum = getFileCrc32() + "-" + getFileSize() + className
+        }
+        return fileChecksum
     }
 
     abstract String getName()
 
     abstract void loadCache()
 
-    abstract void scan(final SourceCodeExtract sourceCodeExtract)
+    abstract void scan(final SourceCodeExtract sourceCodeExtract, final CompilationUnit compilationUnit)
 
     abstract void saveCache()
 

@@ -188,9 +188,7 @@ class CodeLocator {
             implMethodList.addAll(methodImplementationCache.get(qualifiedName + "." + methodDeclaration.name))
         } else {
             def abstractClass = typeSolver.solveType(qualifiedName)
-            def classList = typeSolver.definedClassNames
-
-            for (String str : classList) {
+            for (String str : typeSolver.definedSourceCodeClassNames) {
                 if (str.startsWith("javax.") || str.startsWith("java.") || str.startsWith("javassist.")) {
                     continue //don't need to check core Java classes
                 }
@@ -257,11 +255,9 @@ class CodeLocator {
 
     static List<ClassOrInterfaceType> locateClassExtensionPath(ClassOrInterfaceDeclaration classDeclaration) {
         def implMethodList = new ArrayList<>()
-
         for (ClassOrInterfaceType extendsType : classDeclaration.extends) {
             implMethodList.addAll(extendsType)
         }
-
         return implMethodList
     }
 

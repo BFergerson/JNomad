@@ -23,6 +23,29 @@ import java.util.concurrent.TimeUnit
  */
 class JNomad {
 
+    //hack needed to suppress com.github.javaparser.symbolsolver.javaparsermodel.contexts.MethodCallExprContext
+    //from writing to System.out; can remove when symbolsolver is upgraded to latest version.
+    //todo: upgrade symbolsolver
+    {
+        PrintStream origOut = System.out
+        PrintStream interceptor = new Interceptor(origOut)
+        System.setOut(interceptor)
+    }
+
+    private static class Interceptor extends PrintStream {
+
+        Interceptor(OutputStream out) {
+            super(out, true)
+        }
+
+        @Override
+        void print(String s) {
+            if (s != null && !s.contains("APPLYING:")) {
+                super.print(s)
+            }
+        }
+    }
+
     private List<String> scanFileList = new CopyOnWriteArrayList<>()
     private List<String> scanDirectoryList = new CopyOnWriteArrayList<>()
     private boolean recursiveDirectoryScan = true
@@ -101,18 +124,22 @@ class JNomad {
                         return //hit scan file limit
                     }
 
-                    //println "Scanning source code file: " + f.getName()
-                    def compilationUnit = JavaParser.parse(f)
-                    def queryLiteral = new QueryLiteralExtractor(compilationUnit, f, typeSolver, cache)
-                    def queryTable = new QueryTableAliasExtractor(compilationUnit, f, typeSolver, cache)
-                    def queryColumn = new QueryColumnAliasExtractor(compilationUnit, f, typeSolver, cache)
-                    def queryColumnDataType = new QueryColumnDataTypeExtractor(compilationUnit, f, typeSolver, cache)
-                    def queryColumnJoin = new QueryColumnJoinExtractor(compilationUnit, f, typeSolver, cache)
+                    try {
+                        //println "Scanning source code file: " + f.getName()
+                        def compilationUnit = JavaParser.parse(f)
+                        def queryLiteral = new QueryLiteralExtractor(compilationUnit, f, typeSolver, cache)
+                        def queryTable = new QueryTableAliasExtractor(compilationUnit, f, typeSolver, cache)
+                        def queryColumn = new QueryColumnAliasExtractor(compilationUnit, f, typeSolver, cache)
+                        def queryColumnDataType = new QueryColumnDataTypeExtractor(compilationUnit, f, typeSolver, cache)
+                        def queryColumnJoin = new QueryColumnJoinExtractor(compilationUnit, f, typeSolver, cache)
 
-                    SourceCodeExtractRunner sourceCodeVisitor = new SourceCodeExtractRunner(
-                            queryLiteral, queryTable, queryColumn, queryColumnDataType, queryColumnJoin)
-                    sourceCodeVisitor.scan()
-                    scannedFileList.add(sourceCodeVisitor.sourceCodeExtract)
+                        SourceCodeExtractRunner sourceCodeVisitor = new SourceCodeExtractRunner(
+                                queryLiteral, queryTable, queryColumn, queryColumnDataType, queryColumnJoin)
+                        sourceCodeVisitor.scan(compilationUnit)
+                        scannedFileList.add(sourceCodeVisitor.sourceCodeExtract)
+                    } catch (Exception ex) {
+                        ex.printStackTrace() //make sure we don't lose any exceptions thrown in runnable
+                    }
                 }
             }
         }

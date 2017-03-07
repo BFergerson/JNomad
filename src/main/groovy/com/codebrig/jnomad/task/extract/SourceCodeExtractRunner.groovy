@@ -1,6 +1,7 @@
 package com.codebrig.jnomad.task.extract
 
 import com.codebrig.jnomad.model.SourceCodeExtract
+import com.github.javaparser.ast.CompilationUnit
 
 /**
  * This class will visit all Java source code files and determine if they
@@ -26,14 +27,14 @@ class SourceCodeExtractRunner {
         this.sourceCodeExtract = new SourceCodeExtract(extractorList.toArray(new NomadExtractor[0]))
     }
 
-    void scan() {
+    void scan(CompilationUnit compilationUnit) {
         for (NomadExtractor extractor : extractorList) {
             if (extractor.isUsingCache()) {
                 extractor.loadCache()
             }
 
             if (!extractor.skipScan) {
-                extractor.scan(sourceCodeExtract)
+                extractor.scan(sourceCodeExtract, compilationUnit)
 
                 if (extractor.isUsingCache()) {
                     extractor.saveCache()

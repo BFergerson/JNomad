@@ -20,6 +20,7 @@ import org.mapdb.DB
 class QueryColumnAliasExtractor extends NomadExtractor {
 
     private Map<String, String> columnNameAliasMap = new HashMap<>()
+    private String extractorName = getClass().name
     private String idName
 
     QueryColumnAliasExtractor(CompilationUnit compilationUnit, File sourceFile, TypeSolver typeSolver, DB db) {
@@ -28,7 +29,7 @@ class QueryColumnAliasExtractor extends NomadExtractor {
 
     @Override
     String getName() {
-        return getClass().name
+        return extractorName
     }
 
     @Override
@@ -86,7 +87,7 @@ class QueryColumnAliasExtractor extends NomadExtractor {
         return idName
     }
 
-    void scan(SourceCodeExtract sourceCodeExtract) {
+    void scan(SourceCodeExtract sourceCodeExtract, CompilationUnit compilationUnit) {
         //todo: probably a better way but for now just look for javax.persistence import
         for (ImportDeclaration importDeclaration : compilationUnit.imports) {
             if (importDeclaration.toStringWithoutComments().contains("javax.persistence")) {

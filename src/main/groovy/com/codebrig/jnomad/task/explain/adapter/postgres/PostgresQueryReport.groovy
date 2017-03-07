@@ -95,7 +95,7 @@ class PostgresQueryReport extends QueryIndexReport {
                 //column aliases
                 def queryColumnDataType = visitor.queryColumnDataTypeExtractor
                 if (!queryColumnDataType.columnDataTypeMap.isEmpty()) {
-                    def classExtendsPath = CodeLocator.locateClassExtensionPath(CodeLocator.findClassOrInterfaceDeclarationExpression(queryColumnDataType.compilationUnit.types.get(0)))
+                    def classExtendsPath = queryColumnDataType.extendsClassPath
                     if (!classExtendsPath.isEmpty()) {
                         classExtendsPath.each {
                             ClassOrInterfaceDeclaration declaration = CodeLocator.locateClassOrInterfaceDeclaration(jNomad.typeSolver, it)

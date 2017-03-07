@@ -26,6 +26,7 @@ class QueryLiteralExtractor extends NomadExtractor {
     private foundDynamicQuery
     private possibleQueryList = new ArrayList<String>()
     private possibleDynamicQueryList = new ArrayList<String>()
+    private extractorName = getClass().name
 
     QueryLiteralExtractor(CompilationUnit compilationUnit, File sourceFile, TypeSolver typeSolver, DB cache) {
         super(compilationUnit, sourceFile, typeSolver, cache)
@@ -35,6 +36,7 @@ class QueryLiteralExtractor extends NomadExtractor {
     @Override
     void visit(MethodCallExpr methodCallExpr, JavaParserFacade javaParserFacade) {
         super.visit(methodCallExpr, javaParserFacade)
+        JavaParserFacade.clearInstances()
 
         boolean solveMethodType = true
         try {
@@ -98,7 +100,7 @@ class QueryLiteralExtractor extends NomadExtractor {
 
     @Override
     String getName() {
-        return getClass().name
+        return extractorName
     }
 
     @Override
@@ -149,7 +151,7 @@ class QueryLiteralExtractor extends NomadExtractor {
     }
 
     @Override
-    void scan(SourceCodeExtract sourceCodeExtract) {
+    void scan(SourceCodeExtract sourceCodeExtract, CompilationUnit compilationUnit) {
         //todo: probably a better way but for now just look for javax.persistence import
         for (ImportDeclaration importDeclaration : compilationUnit.imports) {
             if (importDeclaration.toStringWithoutComments().contains("javax.persistence")) {

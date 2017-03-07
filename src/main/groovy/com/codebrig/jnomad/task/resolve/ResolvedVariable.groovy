@@ -6,6 +6,7 @@ package com.codebrig.jnomad.task.resolve
 class ResolvedVariable {
 
     private boolean dynamicVariable
+    private long solveTime
 
     boolean getDynamicVariable() {
         return dynamicVariable
@@ -13,6 +14,14 @@ class ResolvedVariable {
 
     void setDynamicVariable(boolean dynamicVariable) {
         this.dynamicVariable = dynamicVariable
+    }
+
+    long getSolveTime() {
+        return solveTime
+    }
+
+    void setSolveTime(long solveTime) {
+        this.solveTime = solveTime
     }
 
 }

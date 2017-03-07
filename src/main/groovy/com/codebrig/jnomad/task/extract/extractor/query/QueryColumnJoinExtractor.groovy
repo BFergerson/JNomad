@@ -219,7 +219,7 @@ class QueryColumnJoinExtractor extends NomadExtractor {
         return embeddedJoinTableTypeMap
     }
 
-    void scan(SourceCodeExtract sourceCodeExtract) {
+    void scan(SourceCodeExtract sourceCodeExtract, CompilationUnit compilationUnit) {
         //todo: probably a better way but for now just look for javax.persistence import
         for (ImportDeclaration importDeclaration : compilationUnit.imports) {
             if (importDeclaration.toStringWithoutComments().contains("javax.persistence")) {

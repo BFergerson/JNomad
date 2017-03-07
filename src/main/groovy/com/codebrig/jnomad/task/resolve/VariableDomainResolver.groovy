@@ -18,6 +18,7 @@ import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParse
 import com.github.javaparser.symbolsolver.javaparsermodel.declarations.JavaParserSymbolDeclaration
 import com.github.javaparser.symbolsolver.model.resolution.SymbolReference
 import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
+import org.apache.commons.lang3.time.DurationFormatUtils
 
 /**
  * @author Brandon Fergerson <brandon.fergerson@codebrig.com>
@@ -35,6 +36,7 @@ class VariableDomainResolver {
     }
 
     ResolvedVariable solveVariable(SymbolReference ref, Range createQueryCallRange, boolean stringBuilder) {
+        long startSolveTime = System.currentTimeMillis()
         boolean dynamicVariable = false
 
         def variableLocation
@@ -53,8 +55,10 @@ class VariableDomainResolver {
         } else {
             if (queryStringDeclaration instanceof JavaParserParameterDeclaration) {
                 //can't solve method parameter; default to dynamic
+                println "Unable to solve dynamic source code method parameter: " + ref.correspondingDeclaration.getName()
                 def resolvedVariable = new ResolvedVariable()
                 resolvedVariable.dynamicVariable = dynamicVariable = true
+                resolvedVariable.solveTime = System.currentTimeMillis() - startSolveTime
                 return resolvedVariable
             }
             JavaParserSymbolDeclaration symbolDeclaration = (JavaParserSymbolDeclaration) queryStringDeclaration
@@ -224,6 +228,9 @@ class VariableDomainResolver {
 
         def resolvedVariable = new ResolvedVariable()
         resolvedVariable.dynamicVariable = dynamicVariable
+        resolvedVariable.solveTime = System.currentTimeMillis() - startSolveTime
+
+        println "Variable: " + variableLocation + ":" + ref.correspondingDeclaration.getName() + " - Solve time: ${DurationFormatUtils.formatDurationHMS(resolvedVariable.solveTime)}"
         return resolvedVariable
     }
 

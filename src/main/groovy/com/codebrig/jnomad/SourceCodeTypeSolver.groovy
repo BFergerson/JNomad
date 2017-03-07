@@ -1,6 +1,7 @@
 package com.codebrig.jnomad
 
 import com.codebrig.jnomad.utils.CodeLocator
+import com.codebrig.jnomad.utils.NoCacheJavaParserTypeSolver
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.body.TypeDeclaration
@@ -9,13 +10,13 @@ import com.github.javaparser.symbolsolver.model.resolution.SymbolReference
 import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
+import com.google.common.io.Files
 import javassist.ClassPool
 import javassist.NotFoundException
-import com.google.common.io.Files
 
+import java.util.concurrent.TimeUnit
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 
@@ -25,7 +26,11 @@ import java.util.jar.JarFile
 class SourceCodeTypeSolver extends CombinedTypeSolver {
 
     private List<String> definedClassNameList = new ArrayList<>()
-    private final Cache<String, SymbolReference<com.github.javaparser.symbolsolver.model.declarations.TypeDeclaration>> solvedTypeCache = CacheBuilder.newBuilder().build()
+    private List<String> definedSourceCodeClassNameList = new ArrayList<>()
+    private final Cache<String, SymbolReference<com.github.javaparser.symbolsolver.model.declarations.TypeDeclaration>> solvedTypeCache = CacheBuilder.newBuilder()
+            .maximumSize(5000)
+            .expireAfterAccess(5, TimeUnit.SECONDS)
+            .build()
 
     SourceCodeTypeSolver(TypeSolver... elements) {
         super(elements)
@@ -39,14 +44,12 @@ class SourceCodeTypeSolver extends CombinedTypeSolver {
         }
 
         SymbolReference<com.github.javaparser.symbolsolver.model.declarations.TypeDeclaration> type = super.tryToSolveType(name)
-        if (type.solved) {
-            solvedTypeCache.put(name, type)
-        }
+        solvedTypeCache.put(name, type)
         return type
     }
 
     void addJavaParserTypeSolver(File srcDir) {
-        add(new JavaParserTypeSolver(srcDir))
+        add(new NoCacheJavaParserTypeSolver(srcDir))
 
         List<File> queue = CodeLocator.findSourceFiles(srcDir, new ArrayList<>(), true);
         for (File f : queue) {
@@ -58,6 +61,7 @@ class SourceCodeTypeSolver extends CombinedTypeSolver {
                 }
                 String className = compilationUnit.getPackage().get().getName().getQualifiedName() + "." + astTypeDeclaration.get().getNameExpr().getQualifiedName()
                 definedClassNameList.add(className)
+                definedSourceCodeClassNameList.add(className)
             } catch (FileNotFoundException ex) {
                 ex.printStackTrace()
             }
@@ -86,6 +90,10 @@ class SourceCodeTypeSolver extends CombinedTypeSolver {
 
     List<String> getDefinedClassNames() {
         return new ArrayList<>(definedClassNameList)
+    }
+
+    List<String> getDefinedSourceCodeClassNames() {
+        return new ArrayList<>(definedSourceCodeClassNameList)
     }
 
     private static String entryPathToClassName(String entryPath) {

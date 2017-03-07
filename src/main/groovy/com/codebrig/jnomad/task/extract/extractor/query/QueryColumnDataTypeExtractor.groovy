@@ -21,6 +21,7 @@ import org.mapdb.DB
 class QueryColumnDataTypeExtractor extends NomadExtractor {
 
     private Map<String, String> columnDataTypeMap
+    private String extractorName = getClass().name
 
     QueryColumnDataTypeExtractor(CompilationUnit compilationUnit, File sourceFile, TypeSolver typeSolver, DB db) {
         super(compilationUnit, sourceFile, typeSolver, db)
@@ -29,7 +30,7 @@ class QueryColumnDataTypeExtractor extends NomadExtractor {
 
     @Override
     String getName() {
-        return getClass().name
+        return extractorName
     }
 
     @Override
@@ -96,7 +97,7 @@ class QueryColumnDataTypeExtractor extends NomadExtractor {
         return columnDataTypeMap
     }
 
-    void scan(SourceCodeExtract sourceCodeExtract) {
+    void scan(SourceCodeExtract sourceCodeExtract, CompilationUnit compilationUnit) {
         //todo: probably a better way but for now just look for javax.persistence import
         for (ImportDeclaration importDeclaration : compilationUnit.imports) {
             if (importDeclaration.toStringWithoutComments().contains("javax.persistence")) {
