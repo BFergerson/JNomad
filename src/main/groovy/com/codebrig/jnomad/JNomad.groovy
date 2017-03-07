@@ -88,6 +88,36 @@ class JNomad {
         if (cache != null) cache.close()
     }
 
+    private Runnable scanFile(final File f, final TypeSolver typeSolver) {
+        if (scannedFileSet.contains(f)) {
+            return Runnables.doNothing()
+        } else {
+            scannedFileSet.add(f)
+
+            return new Runnable() {
+                void run() {
+                    begunScanCount++
+                    if (scanFileLimit != -1 && begunScanCount > scanFileLimit) {
+                        return //hit scan file limit
+                    }
+
+                    //println "Scanning source code file: " + f.getName()
+                    def compilationUnit = JavaParser.parse(f)
+                    def queryLiteral = new QueryLiteralExtractor(compilationUnit, f, typeSolver, cache)
+                    def queryTable = new QueryTableAliasExtractor(compilationUnit, f, typeSolver, cache)
+                    def queryColumn = new QueryColumnAliasExtractor(compilationUnit, f, typeSolver, cache)
+                    def queryColumnDataType = new QueryColumnDataTypeExtractor(compilationUnit, f, typeSolver, cache)
+                    def queryColumnJoin = new QueryColumnJoinExtractor(compilationUnit, f, typeSolver, cache)
+
+                    SourceCodeExtractRunner sourceCodeVisitor = new SourceCodeExtractRunner(
+                            queryLiteral, queryTable, queryColumn, queryColumnDataType, queryColumnJoin)
+                    sourceCodeVisitor.scan()
+                    scannedFileList.add(sourceCodeVisitor.sourceCodeExtract)
+                }
+            }
+        }
+    }
+
     List<SourceCodeExtract> getScannedFileList() {
         return scannedFileList
     }
@@ -154,36 +184,6 @@ class JNomad {
 
     TypeSolver getTypeSolver() {
         return typeSolver
-    }
-
-    private Runnable scanFile(final File f, final TypeSolver typeSolver) {
-        if (scannedFileSet.contains(f)) {
-            return Runnables.doNothing()
-        } else {
-            scannedFileSet.add(f)
-
-            return new Runnable() {
-                void run() {
-                    begunScanCount++
-                    if (scanFileLimit != -1 && begunScanCount > scanFileLimit) {
-                        return //hit scan file limit
-                    }
-
-                    //println "Scanning source code file: " + f.getName()
-                    def compilationUnit = JavaParser.parse(new FileInputStream(f))
-                    def queryLiteral = new QueryLiteralExtractor(compilationUnit, f, typeSolver, cache)
-                    def queryTable = new QueryTableAliasExtractor(compilationUnit, f, typeSolver, cache)
-                    def queryColumn = new QueryColumnAliasExtractor(compilationUnit, f, typeSolver, cache)
-                    def queryColumnDataType = new QueryColumnDataTypeExtractor(compilationUnit, f, typeSolver, cache)
-                    def queryColumnJoin = new QueryColumnJoinExtractor(compilationUnit, f, typeSolver, cache)
-
-                    SourceCodeExtractRunner sourceCodeVisitor = new SourceCodeExtractRunner(
-                            queryLiteral, queryTable, queryColumn, queryColumnDataType, queryColumnJoin)
-                    sourceCodeVisitor.scan()
-                    scannedFileList.add(sourceCodeVisitor.sourceCodeExtract)
-                }
-            }
-        }
     }
 
 }
