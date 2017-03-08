@@ -23,29 +23,6 @@ import java.util.concurrent.TimeUnit
  */
 class JNomad {
 
-    //hack needed to suppress com.github.javaparser.symbolsolver.javaparsermodel.contexts.MethodCallExprContext
-    //from writing to System.out; can remove when symbolsolver is upgraded to latest version.
-    //todo: upgrade symbolsolver
-    {
-        PrintStream origOut = System.out
-        PrintStream interceptor = new Interceptor(origOut)
-        System.setOut(interceptor)
-    }
-
-    private static class Interceptor extends PrintStream {
-
-        Interceptor(OutputStream out) {
-            super(out, true)
-        }
-
-        @Override
-        void print(String s) {
-            if (s != null && !s.contains("APPLYING:")) {
-                super.print(s)
-            }
-        }
-    }
-
     private List<String> scanFileList = new CopyOnWriteArrayList<>()
     private List<String> scanDirectoryList = new CopyOnWriteArrayList<>()
     private boolean recursiveDirectoryScan = true
