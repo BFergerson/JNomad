@@ -49,7 +49,7 @@ class JNomad {
         this.typeSolver = typeSolver
     }
 
-    def run() {
+    def scanAllFiles() {
         ExecutorService executorService = Executors.newFixedThreadPool(scanThreadCount)
         if (cacheScanResults) {
             cache = DBMaker.fileDB("jnomad.cache").make() //todo: configurable cache

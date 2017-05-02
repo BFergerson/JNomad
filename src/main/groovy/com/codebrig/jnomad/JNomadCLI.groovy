@@ -202,7 +202,7 @@ class JNomadCLI {
         println "${breaker()}JNomad {${JNOMAD_VERSION}}: Collecting queries...${breaker()}"
         long startTime = System.currentTimeMillis()
 
-        jNomad.run()
+        jNomad.scanAllFiles()
 
         int foundQueryVariations = 0
         int foundDynamicQueryVariations = 0
