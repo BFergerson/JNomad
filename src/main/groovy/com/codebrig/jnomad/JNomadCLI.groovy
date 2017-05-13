@@ -156,20 +156,20 @@ class JNomadCLI {
         println "${breaker()}JNomad {${JNOMAD_VERSION}}: Parsing queries...${breaker()}"
         long startTime = System.currentTimeMillis()
 
-        QueryParser ranker = new QueryParser(jNomad)
-        ranker.run()
+        QueryParser queryParser = new QueryParser(jNomad)
+        queryParser.run()
 
         def resultStr = ""
-        resultStr += "\t\tTotal static queries: " + ranker.totalStaticQueryCount + "\n"
-        resultStr += "\t\tTotal dynamic queries: " + ranker.totalDynamicQueryCount + "\n"
-        resultStr += "\t\tUnique static queries: " + ranker.uniqueStaticQueryCount + "\n"
-        resultStr += "\t\tUnique dynamic queries: " + ranker.uniqueDynamicQueryCount + "\n"
+        resultStr += "\t\tTotal static queries: " + queryParser.totalStaticQueryCount + "\n"
+        resultStr += "\t\tTotal dynamic queries: " + queryParser.totalDynamicQueryCount + "\n"
+        resultStr += "\t\tUnique static queries: " + queryParser.uniqueStaticQueryCount + "\n"
+        resultStr += "\t\tUnique dynamic queries: " + queryParser.uniqueDynamicQueryCount + "\n"
         resultStr += "\t\t-\n"
-        resultStr += "\t\tSuccessfully parsed queries: " + ranker.parsedQueryCount + "\n"
-        resultStr += "\t\tUnsuccessfully parsed queries: " + ranker.failedQueryCount
+        resultStr += "\t\tSuccessfully parsed queries: " + queryParser.parsedQueryCount + "\n"
+        resultStr += "\t\tUnsuccessfully parsed queries: " + queryParser.failedQueryCount
 
         println "${breaker()}JNomad {${JNOMAD_VERSION}}: Task finished!\n${resultStr}\n\t\t - Task runtime: ${getRuntime(startTime)}${breaker()}"
-        return ranker
+        return queryParser
     }
 
     private static SourceCodeIndexReport explainQueriesTask(JNomad jNomad, QueryParser queryParser) {
