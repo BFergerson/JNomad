@@ -5,6 +5,7 @@ import com.codebrig.jnomad.task.extract.NomadExtractor
 import com.codebrig.jnomad.task.resolve.QueryExpressionResolver
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.javaparser.Range
 import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.expr.MethodCallExpr
 import com.github.javaparser.ast.imports.ImportDeclaration
@@ -27,6 +28,7 @@ class QueryLiteralExtractor extends NomadExtractor {
     private possibleQueryList = new ArrayList<String>()
     private possibleDynamicQueryList = new ArrayList<String>()
     private extractorName = getClass().name
+    private queryCallRangeMap = new HashMap<String, Range>()
 
     QueryLiteralExtractor(CompilationUnit compilationUnit, File sourceFile, TypeSolver typeSolver, DB cache) {
         super(compilationUnit, sourceFile, typeSolver, cache)
@@ -60,7 +62,9 @@ class QueryLiteralExtractor extends NomadExtractor {
                         if (!possibleQueries.isEmpty()) {
                             println "Found static queries: " + Arrays.toString(possibleQueries) + "\n\tSource code file: " + getClassName()
                             possibleQueries.each {
-                                possibleQueryList.add(it.toStringWithoutComments().toLowerCase())
+                                def query = it.toStringWithoutComments().toLowerCase()
+                                possibleQueryList.add(query)
+                                queryCallRangeMap.put(query, methodCallExpr.range)
                             }
                             foundQuery = true
                         }
@@ -68,7 +72,9 @@ class QueryLiteralExtractor extends NomadExtractor {
                         if (!possibleDynamicQueries.isEmpty()) {
                             println "Found dynamic queries: " + Arrays.toString(possibleDynamicQueries) + "\n\tSource code file: " + getClassName()
                             possibleDynamicQueries.each {
-                                possibleDynamicQueryList.add(it.toStringWithoutComments().toLowerCase())
+                                def query = it.toStringWithoutComments().toLowerCase()
+                                possibleDynamicQueryList.add(query)
+                                queryCallRangeMap.put(query, methodCallExpr.range)
                             }
                             foundDynamicQuery = true
                         }
@@ -171,6 +177,10 @@ class QueryLiteralExtractor extends NomadExtractor {
 
     def getPossibleDynamicQueryList() {
         return possibleDynamicQueryList
+    }
+
+    def getQueryCallRange(String query) {
+        return queryCallRangeMap.get(query)
     }
 
     def getAllPossibleQueryList() {
