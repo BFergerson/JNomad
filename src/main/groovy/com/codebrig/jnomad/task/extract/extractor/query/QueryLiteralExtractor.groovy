@@ -5,6 +5,7 @@ import com.codebrig.jnomad.task.extract.NomadExtractor
 import com.codebrig.jnomad.task.resolve.QueryExpressionResolver
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.javaparser.Position
 import com.github.javaparser.Range
 import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.expr.MethodCallExpr
@@ -28,7 +29,7 @@ class QueryLiteralExtractor extends NomadExtractor {
     private possibleQueryList = new ArrayList<String>()
     private possibleDynamicQueryList = new ArrayList<String>()
     private extractorName = getClass().name
-    private queryCallRangeMap = new HashMap<String, Range>()
+    private queryCallRangeMap = new HashMap<String, int[]>()
 
     QueryLiteralExtractor(CompilationUnit compilationUnit, File sourceFile, TypeSolver typeSolver, DB cache) {
         super(compilationUnit, sourceFile, typeSolver, cache)
@@ -64,7 +65,7 @@ class QueryLiteralExtractor extends NomadExtractor {
                             possibleQueries.each {
                                 def query = it.toStringWithoutComments().toLowerCase()
                                 possibleQueryList.add(query)
-                                queryCallRangeMap.put(query, methodCallExpr.range)
+                                queryCallRangeMap.put(query, toIntArray(methodCallExpr.range))
                             }
                             foundQuery = true
                         }
@@ -74,7 +75,7 @@ class QueryLiteralExtractor extends NomadExtractor {
                             possibleDynamicQueries.each {
                                 def query = it.toStringWithoutComments().toLowerCase()
                                 possibleDynamicQueryList.add(query)
-                                queryCallRangeMap.put(query, methodCallExpr.range)
+                                queryCallRangeMap.put(query, toIntArray(methodCallExpr.range))
                             }
                             foundDynamicQuery = true
                         }
@@ -123,6 +124,8 @@ class QueryLiteralExtractor extends NomadExtractor {
                     new TypeReference<List<String>>() {})
             possibleDynamicQueryList = new ObjectMapper().readValue(underMap.get("possibleDynamicQueryList"),
                     new TypeReference<List<String>>() {})
+            queryCallRangeMap = new ObjectMapper().readValue(underMap.get("queryCallRangeMap"),
+                    new TypeReference<Map<String, int[]>>() {})
 
             foundQuery = !possibleQueryList.isEmpty()
             foundDynamicQuery = !possibleDynamicQueryList.isEmpty()
@@ -150,6 +153,10 @@ class QueryLiteralExtractor extends NomadExtractor {
         writer = new StringWriter()
         new ObjectMapper().writeValue(writer, possibleDynamicQueryList)
         map.put("possibleDynamicQueryList", writer.toString())
+
+        writer = new StringWriter()
+        new ObjectMapper().writeValue(writer, queryCallRangeMap)
+        map.put("queryCallRangeMap", writer.toString())
 
         writer = new StringWriter()
         new ObjectMapper().writeValue(writer, map)
@@ -180,7 +187,7 @@ class QueryLiteralExtractor extends NomadExtractor {
     }
 
     def getQueryCallRange(String query) {
-        return queryCallRangeMap.get(query)
+        return toRange(queryCallRangeMap.get(query))
     }
 
     def getAllPossibleQueryList() {
@@ -192,6 +199,20 @@ class QueryLiteralExtractor extends NomadExtractor {
             returnList.add(it)
         }
         return returnList
+    }
+
+    private static int[] toIntArray(Range range) {
+        return [
+                range.begin.line, range.begin.column,
+                range.end.line, range.end.column
+        ]
+    }
+
+    private static Range toRange(int[] intArr) {
+        return new Range(
+                new Position(intArr[0], intArr[1]),
+                new Position(intArr[2], intArr[3])
+        )
     }
 
 }
