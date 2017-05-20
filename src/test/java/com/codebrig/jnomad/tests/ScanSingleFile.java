@@ -3,8 +3,6 @@ package com.codebrig.jnomad.tests;
 import com.codebrig.jnomad.JNomad;
 import com.codebrig.jnomad.SourceCodeTypeSolver;
 import com.codebrig.jnomad.model.*;
-import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresQueryReport;
-import com.codebrig.jnomad.task.parse.QueryParser;
 import com.github.javaparser.Range;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JreTypeSolver;
 
@@ -64,13 +62,7 @@ public class ScanSingleFile {
         //output results
         System.out.println("\nFound query/queries: " + extract.getQueryLiteralExtractor().getQueryFound());
         if (extract.getQueryLiteralExtractor().getQueryFound()) {
-            QueryParser queryParser = new QueryParser(jNomad);
-            queryParser.run();
-
-            PostgresQueryReport reportAdapter = new PostgresQueryReport(jNomad, queryParser);
-            SourceCodeIndexReport report = reportAdapter.createSourceCodeIndexReport();
-
-            FileFullReport fileFullReport = new FileFullReport(scanFile, jNomad, report);
+            FileFullReport fileFullReport = new FileFullReport(scanFile, jNomad);
 
             System.out.println("\nQuery scores:");
             for (QueryScore queryScore : fileFullReport.getQueryScoreList()) {

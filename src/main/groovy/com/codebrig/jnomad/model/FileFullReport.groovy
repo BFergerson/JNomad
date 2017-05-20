@@ -1,7 +1,9 @@
 package com.codebrig.jnomad.model;
 
 import com.codebrig.jnomad.JNomad;
-import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain;
+import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
+import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresQueryReport
+import com.codebrig.jnomad.task.parse.QueryParser;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.util.Precision
 
@@ -14,12 +16,16 @@ public class FileFullReport {
     private final List<QueryScore> queryScoreList
     private final List<RecommendedIndex> recommendedIndexList
 
-    public FileFullReport(File file, JNomad jNomad, SourceCodeIndexReport indexReport) {
+    public FileFullReport(File file, JNomad jNomad) {
         this.file = file
         queryScoreList = new ArrayList<>()
         recommendedIndexList = new ArrayList<>()
 
-        reportQueriesTask(jNomad, indexReport)
+        QueryParser queryParser = new QueryParser(jNomad);
+        queryParser.run();
+        PostgresQueryReport reportAdapter = new PostgresQueryReport(jNomad, queryParser);
+        SourceCodeIndexReport report = reportAdapter.createSourceCodeIndexReport();
+        reportQueriesTask(jNomad, report)
     }
 
     private void reportQueriesTask(JNomad jNomad, SourceCodeIndexReport indexReport) {
