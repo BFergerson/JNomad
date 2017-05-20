@@ -120,7 +120,7 @@ class PostgresExplain extends ExplainResult {
         if (costliestNodeValue == null) {
             costliestNodeValue = 0.0
         }
-        return new CalculatedExplainPlan(costliestNodeValue, costliestPlan, explainedStatement)
+        return new CalculatedExplainPlan(this, costliestNodeValue, costliestPlan, explainedStatement)
     }
 
     CalculatedExplainPlan calculateSlowestNode() {
@@ -159,7 +159,7 @@ class PostgresExplain extends ExplainResult {
         if (slowestNodeValue == null) {
             slowestNodeValue = 0.0
         }
-        return new CalculatedExplainPlan(slowestNodeValue, slowestPlan, explainedStatement)
+        return new CalculatedExplainPlan(this, slowestNodeValue, slowestPlan, explainedStatement)
     }
 
     private static List<ExplainPlan> flattenPostgresExplain(ExplainPlan plan, List<ExplainPlan> planList) {

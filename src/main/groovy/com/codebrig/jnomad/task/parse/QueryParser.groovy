@@ -190,7 +190,7 @@ class QueryParser {
 
                     TableRankVisitor rankVisitor = new TableRankVisitor(tableRank, it.value.queryList.size())
                     selectStatement.getSelectBody().accept(rankVisitor)
-                    it.value.extract.addParsedQuery(selectStatement)
+                    it.value.extract.addParsedQuery(selectStatement, it.key)
                 } else if (statement instanceof Update) {
                     Update updateStatement = (Update) statement
                     tablesNamesFinder = new TablesNamesFinder()
@@ -220,7 +220,7 @@ class QueryParser {
                     if (updateStatement.where != null) {
                         updateStatement.where.accept(rankVisitor)
                     }
-                    it.value.extract.addParsedQuery(updateStatement)
+                    it.value.extract.addParsedQuery(updateStatement, it.key)
                 } else if (statement instanceof Delete) {
                     Delete deleteStatement = (Delete) statement
                     tablesNamesFinder = new TablesNamesFinder()
@@ -250,7 +250,7 @@ class QueryParser {
                     if (deleteStatement.where != null) {
                         deleteStatement.where.accept(rankVisitor)
                     }
-                    it.value.extract.addParsedQuery(deleteStatement)
+                    it.value.extract.addParsedQuery(deleteStatement, it.key)
                 } else {
                     println "Skipped parsing query: " + statement
                     println "\tSource code file: " + it.value.extract.queryLiteralExtractor.getClassName()

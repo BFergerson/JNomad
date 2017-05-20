@@ -29,24 +29,33 @@ class JNomad {
     private int scanThreadCount = 5
     private int scanFileLimit = -1
     private boolean cacheScanResults = true
-
-    //todo: make private
-    public List<String> dbHost
-    public List<String> dbUsername
-    public List<String> dbPassword
-    public List<String> dbDatabase
-    public boolean queryExplainAnalyze
-    public int offenderReportPercentage = 10
-    public int indexPriorityThreshold = 50
-
-    private TypeSolver typeSolver
+    private List<String> dbHost
+    private List<String> dbUsername
+    private List<String> dbPassword
+    private List<String> dbDatabase
+    private boolean queryExplainAnalyze
+    private int offenderReportPercentage = 10
+    private int indexPriorityThreshold = 50
+    private SourceCodeTypeSolver typeSolver
     private Set<File> scannedFileSet = new HashSet<>()
     private List<SourceCodeExtract> scannedFileList = new CopyOnWriteArrayList<>()
     private int begunScanCount = 0
     private DB cache
 
-    JNomad(TypeSolver typeSolver) {
+    JNomad(SourceCodeTypeSolver typeSolver) {
         this.typeSolver = typeSolver
+
+        //add JavaEE API to type solver
+        def f = new File(JNomad.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath())
+        if (f.isDirectory()) {
+            def path = getClass().getResource("/javaee-api-7.0.jar").toExternalForm()
+            if (path.startsWith("file:/")) {
+                path = path.substring(6)
+            }
+            typeSolver.addJarTypeSolver(path)
+        } else {
+            typeSolver.addJarTypeSolver(f.absolutePath)
+        }
     }
 
     def scanAllFiles() {
@@ -58,7 +67,7 @@ class JNomad {
         //scan files requested
         for (String sourceFile : scanFileList) {
             if (scanFileLimit == -1 || begunScanCount < scanFileLimit) {
-                def scanFileTask = scanFile(new File(sourceFile), typeSolver)
+                def scanFileTask = scanFile(new File(sourceFile))
                 if (scanFileTask != Runnables.doNothing()) {
                     executorService.submit(scanFileTask)
                 }
@@ -69,7 +78,7 @@ class JNomad {
         for (String sourceDirectory : scanDirectoryList) {
             for (final File sourceFile : CodeLocator.findSourceFiles(new File(sourceDirectory), new ArrayList<File>(), true)) {
                 if (scanFileLimit == -1 || begunScanCount < scanFileLimit) {
-                    def scanFileTask = scanFile(sourceFile, typeSolver)
+                    def scanFileTask = scanFile(sourceFile)
                     if (scanFileTask != Runnables.doNothing()) {
                         executorService.submit(scanFileTask)
                     }
@@ -88,7 +97,22 @@ class JNomad {
         if (cache != null) cache.close()
     }
 
-    private Runnable scanFile(final File f, final TypeSolver typeSolver) {
+    public SourceCodeExtract scanSingleFile(File file) {
+        def compilationUnit = JavaParser.parse(file)
+        def queryLiteral = new QueryLiteralExtractor(compilationUnit, file, typeSolver, cache)
+        def queryTable = new QueryTableAliasExtractor(compilationUnit, file, typeSolver, cache)
+        def queryColumn = new QueryColumnAliasExtractor(compilationUnit, file, typeSolver, cache)
+        def queryColumnDataType = new QueryColumnDataTypeExtractor(compilationUnit, file, typeSolver, cache)
+        def queryColumnJoin = new QueryColumnJoinExtractor(compilationUnit, file, typeSolver, cache)
+
+        SourceCodeExtractRunner sourceCodeVisitor = new SourceCodeExtractRunner(
+                queryLiteral, queryTable, queryColumn, queryColumnDataType, queryColumnJoin)
+        sourceCodeVisitor.scan(compilationUnit)
+        scannedFileList.add(sourceCodeVisitor.sourceCodeExtract)
+        return sourceCodeVisitor.sourceCodeExtract
+    }
+
+    private Runnable scanFile(final File f) {
         if (scannedFileSet.contains(f)) {
             return Runnables.doNothing()
         } else {
@@ -103,17 +127,7 @@ class JNomad {
 
                     try {
                         //println "Scanning source code file: " + f.getName()
-                        def compilationUnit = JavaParser.parse(f)
-                        def queryLiteral = new QueryLiteralExtractor(compilationUnit, f, typeSolver, cache)
-                        def queryTable = new QueryTableAliasExtractor(compilationUnit, f, typeSolver, cache)
-                        def queryColumn = new QueryColumnAliasExtractor(compilationUnit, f, typeSolver, cache)
-                        def queryColumnDataType = new QueryColumnDataTypeExtractor(compilationUnit, f, typeSolver, cache)
-                        def queryColumnJoin = new QueryColumnJoinExtractor(compilationUnit, f, typeSolver, cache)
-
-                        SourceCodeExtractRunner sourceCodeVisitor = new SourceCodeExtractRunner(
-                                queryLiteral, queryTable, queryColumn, queryColumnDataType, queryColumnJoin)
-                        sourceCodeVisitor.scan(compilationUnit)
-                        scannedFileList.add(sourceCodeVisitor.sourceCodeExtract)
+                        scanSingleFile(f)
                     } catch (Exception ex) {
                         ex.printStackTrace() //make sure we don't lose any exceptions thrown in runnable
                     }
@@ -171,23 +185,59 @@ class JNomad {
     }
 
     List<String> getDbHost() {
+        if (dbHost == null) {
+            dbHost = new ArrayList<>()
+        }
         return dbHost
     }
 
     List<String> getDbUsername() {
+        if (dbUsername == null) {
+            dbUsername = new ArrayList<>()
+        }
         return dbUsername
     }
 
     List<String> getDbPassword() {
+        if (dbPassword == null) {
+            dbPassword = new ArrayList<>()
+        }
         return dbPassword
     }
 
     List<String> getDbDatabase() {
+        if (dbDatabase == null) {
+            dbDatabase = new ArrayList<>()
+        }
         return dbDatabase
     }
 
     TypeSolver getTypeSolver() {
         return typeSolver
+    }
+
+    void setQueryExplainAnalyze(boolean queryExplainAnalyze) {
+        this.queryExplainAnalyze = queryExplainAnalyze
+    }
+
+    boolean getQueryExplainAnalyze() {
+        return queryExplainAnalyze
+    }
+
+    void setOffenderReportPercentage(int offenderReportPercentage) {
+        this.offenderReportPercentage = offenderReportPercentage
+    }
+
+    int getOffenderReportPercentage() {
+        return offenderReportPercentage
+    }
+
+    void setIndexPriorityThreshold(int indexPriorityThreshold) {
+        this.indexPriorityThreshold = indexPriorityThreshold
+    }
+
+    int getIndexPriorityThreshold() {
+        return indexPriorityThreshold
     }
 
 }

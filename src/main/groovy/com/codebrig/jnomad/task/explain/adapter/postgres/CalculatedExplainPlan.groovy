@@ -9,6 +9,7 @@ import net.sf.jsqlparser.statement.Statement
  */
 class CalculatedExplainPlan {
 
+    private final PostgresExplain postgresExplain
     private final double value
     private final ExplainPlan plan
     private final Statement statement
@@ -16,10 +17,15 @@ class CalculatedExplainPlan {
     private Object parentToNomadValue
     private double costScore
 
-    CalculatedExplainPlan(double value, ExplainPlan plan, Statement statement) {
+    CalculatedExplainPlan(PostgresExplain postgresExplain, double value, ExplainPlan plan, Statement statement) {
+        this.postgresExplain = postgresExplain
         this.value = value
         this.plan = plan
         this.statement = statement
+    }
+
+    PostgresExplain getPostgresExplain() {
+        return postgresExplain
     }
 
     double getValue() {

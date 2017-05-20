@@ -64,6 +64,10 @@ abstract class NomadExtractor extends VoidVisitorAdapter<JavaParserFacade> {
         return sourceFile.length()
     }
 
+    File getSourceFile() {
+        return sourceFile
+    }
+
     String getFileChecksum() {
         if (fileChecksum == null) {
             fileChecksum = getFileCrc32() + "-" + getFileSize() + className

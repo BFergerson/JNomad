@@ -27,6 +27,7 @@ class IndexRecommendation {
         private double priorityMultiplier = 1.0
         private String tableName
         private Object toIndex
+        private List<CalculatedExplainPlan> hitList = new ArrayList<>()
 
         IndexHitMap(String tableName, Object toIndex) {
             this.tableName = Objects.requireNonNull(tableName)
@@ -45,7 +46,8 @@ class IndexRecommendation {
             return hitCount.get()
         }
 
-        void increaseHitCount() {
+        void increaseHitCount(CalculatedExplainPlan plan) {
+            hitList.add(Objects.requireNonNull(plan))
             hitCount.incrementAndGet()
         }
 
@@ -57,6 +59,9 @@ class IndexRecommendation {
             return toIndex
         }
 
+        List<CalculatedExplainPlan> getHitList() {
+            return hitList
+        }
     }
 
     TreeMap<Integer, IndexHitMap> getIndexHitMapTreeMap() {
@@ -77,7 +82,7 @@ class IndexRecommendation {
 
         def statementHitCache = statementIndexHitMap.get(plan.statement)
         if (statementHitCache != null) {
-            statementHitCache.increaseHitCount()
+            statementHitCache.increaseHitCount(plan)
 
             if (plan.costScore > stats.mean + stats.standardDeviation) {
                 double multiplier = new Pow().value(((plan.costScore - stats.mean) / stats.standardDeviation), 2)
@@ -126,7 +131,7 @@ class IndexRecommendation {
                     if (tableExpressionIndexMap == null) {
                         tableIndexMap.put(toIndex.toString(), tableExpressionIndexMap = new IndexHitMap(tableName, toIndex))
                     }
-                    tableExpressionIndexMap.increaseHitCount()
+                    tableExpressionIndexMap.increaseHitCount(plan)
                     statementIndexHitMap.put(plan.statement, tableExpressionIndexMap)
 
                     if (plan.costScore > stats.mean + stats.standardDeviation) {
@@ -147,7 +152,7 @@ class IndexRecommendation {
                     if (tableExpressionIndexMap == null) {
                         tableIndexMap.put(toIndex.toString(), tableExpressionIndexMap = new IndexHitMap(tableName, toIndex))
                     }
-                    tableExpressionIndexMap.increaseHitCount()
+                    tableExpressionIndexMap.increaseHitCount(plan)
                     statementIndexHitMap.put(plan.statement, tableExpressionIndexMap)
 
                     if (plan.costScore > stats.mean + stats.standardDeviation) {

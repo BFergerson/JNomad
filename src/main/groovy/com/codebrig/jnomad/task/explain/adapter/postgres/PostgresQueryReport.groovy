@@ -42,6 +42,11 @@ class PostgresQueryReport extends QueryIndexReport {
     PostgresQueryReport(JNomad jNomad, QueryParser queryParser) {
         super(jNomad)
         this.queryParser = queryParser
+
+        if (jNomad.dbDatabase.isEmpty() || jNomad.dbHost.isEmpty()
+                || jNomad.dbUsername.isEmpty() || jNomad.dbPassword.isEmpty()) {
+            throw new RuntimeException("Postgres database access was not provided!")
+        }
     }
 
     @Override
@@ -134,8 +139,8 @@ class PostgresQueryReport extends QueryIndexReport {
 
             for (SourceCodeExtract extract : jNomad.scannedFileList) {
                 for (Statement statement : extract.parsedQueryList) {
-                    def originalQuery = statement.toString()
-                    allQueryList.add(originalQuery)
+                    allQueryList.add(statement.toString())
+                    def originalQuery = extract.getStatementOriginalQuery(statement)
 
                     def query
                     try {

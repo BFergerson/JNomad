@@ -71,13 +71,6 @@ class SourceCodeIndexReport {
         return map
     }
 
-    void calculateExtraInformation() {
-        totalCostMap.each {
-            def explain = it.value
-            setSlowestNode(explain)
-        }
-    }
-
     void addCalculatedExplainPlan(CalculatedExplainPlan calculatedExplainPlan, DescriptiveStatistics stats) {
         indexRecommendation.determineBestIndex(calculatedExplainPlan, stats)
     }

@@ -14,24 +14,31 @@ class SourceCodeExtract {
     private final List<String> queryFoundList
     private final List<Statement> parsedQueryList
     private final List<ExplainResult> queryExplainResultList
+    private final Map<Statement, String> originalQueryMap
 
     SourceCodeExtract(NomadExtractor[] extractors) {
         this.extractors = extractors
         queryFoundList = new ArrayList<>()
         parsedQueryList = new ArrayList<>()
         queryExplainResultList =  new ArrayList<>()
+        originalQueryMap = new HashMap<>()
     }
 
     void addQueryFound(String queryFound) {
         queryFoundList.add(queryFound)
     }
 
-    void addParsedQuery(Statement statement) {
+    void addParsedQuery(Statement statement, String originalQuery) {
         parsedQueryList.add(statement)
+        originalQueryMap.put(statement, originalQuery)
     }
 
     List<Statement> getParsedQueryList() {
         return parsedQueryList
+    }
+
+    public String getStatementOriginalQuery(Statement statement) {
+        return originalQueryMap.get(statement)
     }
 
     void addQueryExplainResult(ExplainResult explainResult) {

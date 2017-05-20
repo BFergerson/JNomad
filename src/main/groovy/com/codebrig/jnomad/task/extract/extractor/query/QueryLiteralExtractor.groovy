@@ -63,7 +63,7 @@ class QueryLiteralExtractor extends NomadExtractor {
                         if (!possibleQueries.isEmpty()) {
                             println "Found static queries: " + Arrays.toString(possibleQueries) + "\n\tSource code file: " + getClassName()
                             possibleQueries.each {
-                                def query = it.toStringWithoutComments().toLowerCase()
+                                def query = it.value.toLowerCase()
                                 possibleQueryList.add(query)
                                 queryCallRangeMap.put(query, toIntArray(methodCallExpr.range))
                             }
@@ -187,7 +187,7 @@ class QueryLiteralExtractor extends NomadExtractor {
     }
 
     def getQueryCallRange(String query) {
-        return toRange(queryCallRangeMap.get(query))
+        return toRange(queryCallRangeMap.get(Objects.requireNonNull(query).toLowerCase()))
     }
 
     def getAllPossibleQueryList() {

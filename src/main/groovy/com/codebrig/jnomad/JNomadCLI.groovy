@@ -187,7 +187,7 @@ class JNomadCLI {
         int successfullyExplainedCount = reportAdapter.successfullyExplainedQueryList.size()
         int permissionDeniedCount = reportAdapter.permissionDeniedTableList.size()
 
-        def resultStr = "\t\tQueries attempted to explain: ${allQueryCount}\n"
+        def resultStr = "Queries attempted to explain: ${allQueryCount}\n"
         resultStr += "\t\tQueries sucessfully explained: ${successfullyExplainedCount}\n"
         resultStr += "\t\tQueries failed to explain: ${failedParseCount}\n"
         resultStr += "\t\tQueries failed due to permission denied: ${permissionDeniedCount}\n"
@@ -336,10 +336,10 @@ class JNomadCLI {
         jNomad.scanThreadCount = main.scanThreadCount
         jNomad.scanFileLimit = main.scanFileLimit
         jNomad.cacheScanResults = main.cacheScanResults
-        jNomad.dbHost = main.dbHost
-        jNomad.dbUsername = main.dbUsername
-        jNomad.dbPassword = main.dbPassword
-        jNomad.dbDatabase = main.dbDatabase
+        jNomad.dbHost.addAll(main.dbHost)
+        jNomad.dbUsername.addAll(main.dbUsername)
+        jNomad.dbPassword.addAll(main.dbPassword)
+        jNomad.dbDatabase.addAll(main.dbDatabase)
         jNomad.queryExplainAnalyze = main.queryExplainAnalyze
         jNomad.offenderReportPercentage = main.offenderReportPercentage
         jNomad.indexPriorityThreshold = main.indexPriorityThreshold
@@ -390,10 +390,28 @@ class JNomadCLI {
         def map = indexReport.indexRecommendation.indexHitMapTreeMap.descendingMap()
         map.each {
             if (it.key >= jNomad.indexPriorityThreshold) {
-                println "Index Priority: " + Precision.round(it.key, 0)
-                println "Index Condition: " + it.value.toIndex.toString()
-                println "Index Table: " + it.value.tableName
-                println "Index: " + "CREATE INDEX ON ${it.value.tableName} (${it.value.toIndex.toString()});" + "\n"
+                println "\nIndex: " + "CREATE INDEX ON ${it.value.tableName} (${it.value.toIndex.toString()});"
+                println "\tIndex Priority: " + Precision.round(it.key, 0)
+                println "\tIndex Table: " + it.value.tableName
+                println "\tIndex Condition: " + it.value.toIndex.toString()
+
+                //unique query locations this index would likely improve
+                def locationSet = new HashSet<>()
+                boolean outputHeader = false
+                it.value.hitList.each {
+                    def literalExtractor = it.postgresExplain.sourceCodeExtract.queryLiteralExtractor
+                    def range = literalExtractor.getQueryCallRange(it.postgresExplain.originalQuery)
+
+                    if (!locationSet.contains(range)) {
+                        if (!outputHeader) {
+                            println("\tIndex Affects:")
+                            outputHeader = true
+                        }
+                        println "\t\tFile: " + literalExtractor.sourceFile + " - Location: " + range
+                    }
+                    locationSet.add(range)
+                }
+                println()
                 recommendationCount++
             }
         }
