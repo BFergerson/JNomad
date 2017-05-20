@@ -283,18 +283,6 @@ class JNomadCLI {
         SourceCodeTypeSolver typeSolver = new SourceCodeTypeSolver()
         typeSolver.add(new JreTypeSolver())
 
-        //.jar files
-        def f = new File(JNomadCLI.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath())
-        if (f.isDirectory()) {
-            def path = getClass().getResource("/javaee-api-7.0.jar").toExternalForm()
-            if (path.startsWith("file:/")) {
-                path = path.substring(6)
-            }
-            typeSolver.addJarTypeSolver(path)
-        } else {
-            typeSolver.addJarTypeSolver(f.absolutePath)
-        }
-
         //.Java source directories
         def tempRemoveList = new ArrayList<>()
         def tempAddList = new ArrayList<>()
@@ -474,12 +462,6 @@ class JNomadCLI {
         }
         sb.append("\n")
         return sb.toString()
-    }
-
-    private static
-    void addJarTypeSolver(SourceCodeTypeSolver typeSolver, String jarLocation) {
-        typeSolver.addJarTypeSolver(jarLocation)
-        println "Added .jar library to classpath: " + jarLocation
     }
 
     private static
