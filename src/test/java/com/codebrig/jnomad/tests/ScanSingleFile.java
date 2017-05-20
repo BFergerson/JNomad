@@ -23,7 +23,9 @@ public class ScanSingleFile {
 
         //.Java source directories
         List<String> sourceDirectoryList = new ArrayList<>();
-        sourceDirectoryList.add(new File("").getAbsoluteFile().getAbsolutePath());
+
+        //todo: add source directory of (from project workspace)
+        //sourceDirectoryList.add(new File("").getAbsoluteFile().getAbsolutePath());
 
         List<String> tempRemoveList = new ArrayList<>();
         List<String> tempAddList = new ArrayList<>();
