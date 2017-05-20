@@ -57,7 +57,7 @@ public class ScanSingleFile {
         jNomad.setOffenderReportPercentage(100);
 
         //scan file
-        File scanFile = new File("C:\\Users\\Brandon\\IdeaProjects\\JNomad\\src\\test\\resources\\TestSingleFile.java");
+        File scanFile = new File("src\\test\\resources\\TestSingleFile.java");
         System.out.println("Scanning file: " + scanFile + "\n");
         SourceCodeExtract extract = jNomad.scanSingleFile(scanFile);
 
