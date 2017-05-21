@@ -50,7 +50,7 @@ java -jar JNomadCLI.jar -scan_directory C:\MyWorkspace\MyJavaProject -db_host lo
 ### Output
 ```
 ****************************************************************************************************
-JNomad {1.0/Alpha}: Index Recommendations
+JNomad {1.2/Alpha}: Index Recommendations
 ****************************************************************************************************
 
 Index Priority: 1202.0
