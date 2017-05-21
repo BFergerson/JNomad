@@ -45,7 +45,7 @@ public class ScanSingleFile {
         JNomad jNomad = new JNomad(typeSolver);
 
         //db access
-        jNomad.getDbHost().add("localhost:5433");
+        jNomad.getDbHost().add("localhost");
         jNomad.getDbDatabase().add("test");
         jNomad.getDbUsername().add("postgres");
         jNomad.getDbPassword().add("postgres");
