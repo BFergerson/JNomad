@@ -1,5 +1,6 @@
 package com.codebrig.jnomad.task.explain
 
+import com.google.common.collect.Sets
 import net.sf.jsqlparser.expression.Expression
 import net.sf.jsqlparser.statement.create.table.ColDataType
 
@@ -8,7 +9,7 @@ import net.sf.jsqlparser.statement.create.table.ColDataType
  */
 abstract class DatabaseDataType {
 
-    public static final Set<String> JNOMAD_REGISTERED_IDS = new HashSet<String>()
+    public static final Set<String> JNOMAD_REGISTERED_IDS = Sets.newConcurrentHashSet()
 
     abstract void addDataType(String tableColumnName, String dataType)
 

@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    compile 'org.codehaus.groovy:groovy-all:2.3.11'
+    compile 'org.codehaus.groovy:groovy-all:2.4.6'
     compile group: 'com.beust', name: 'jcommander', version: '1.7'
     compile group: 'com.github.javaparser', name: 'javaparser-core', version: '3.0.0-alpha.6'
     compile 'com.github.javaparser:java-symbol-solver-core:0.3.2'

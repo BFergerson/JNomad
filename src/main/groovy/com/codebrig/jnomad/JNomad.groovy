@@ -10,6 +10,7 @@ import com.google.common.util.concurrent.Runnables
 import org.mapdb.DB
 import org.mapdb.DBMaker
 
+import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -45,23 +46,43 @@ class JNomad {
     JNomad(SourceCodeTypeSolver typeSolver) {
         this.typeSolver = typeSolver
 
-        //add JavaEE API to type solver
-        def f = new File(JNomad.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath())
-        if (f.isDirectory()) {
-            def path = getClass().getResource("/javaee-api-7.0.jar").toExternalForm()
-            if (path.startsWith("file:/")) {
-                path = path.substring(6)
+        try {
+            //todo: improve this whole block
+            //add JavaEE API to type solver
+            def domain = JNomad.class.getProtectionDomain()
+            URL javaEEUrl = domain.getClassLoader().getResource("/javaee-api-7.0.jar")
+            if (javaEEUrl != null) {
+                def path = javaEEUrl.toString().replace("%20", " ")
+                if (path.startsWith("file:/")) {
+                    path = path.substring(6)
+                }
+                typeSolver.addJarTypeSolver(path)
+            } else {
+                def f = new File(domain.getCodeSource().getLocation().toURI().getPath())
+                if (f.isDirectory()) {
+                    def path = getClass().getResource("/javaee-api-7.0.jar").toExternalForm()
+                    if (path.startsWith("file:/")) {
+                        path = path.substring(6)
+                    }
+                    typeSolver.addJarTypeSolver(path)
+                } else {
+                    typeSolver.addJarTypeSolver(f.absolutePath)
+                }
             }
-            typeSolver.addJarTypeSolver(path)
-        } else {
-            typeSolver.addJarTypeSolver(f.absolutePath)
+        } catch (Exception ex) {
+            //todo: better
         }
     }
 
     def scanAllFiles() {
         ExecutorService executorService = Executors.newFixedThreadPool(scanThreadCount)
         if (cacheScanResults) {
-            cache = DBMaker.fileDB("jnomad.cache").make() //todo: configurable cache
+            try {
+                cache = DBMaker.fileDB(System.getProperty("java.io.tmpdir") + "jnomad.cache").make() //todo: configurable cache
+            } catch(Exception e) {
+                new File(System.getProperty("java.io.tmpdir") + "jnomad.cache").delete()
+                cache = DBMaker.fileDB(System.getProperty("java.io.tmpdir") + "jnomad.cache").make() //todo: configurable cache
+            }
         }
 
         //scan files requested
@@ -212,7 +233,7 @@ class JNomad {
         return dbDatabase
     }
 
-    TypeSolver getTypeSolver() {
+    SourceCodeTypeSolver getTypeSolver() {
         return typeSolver
     }
 

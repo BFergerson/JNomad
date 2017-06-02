@@ -34,7 +34,7 @@ class SourceCodeExtract {
     }
 
     List<Statement> getParsedQueryList() {
-        return parsedQueryList
+        return new ArrayList<Statement>(parsedQueryList)
     }
 
     public String getStatementOriginalQuery(Statement statement) {

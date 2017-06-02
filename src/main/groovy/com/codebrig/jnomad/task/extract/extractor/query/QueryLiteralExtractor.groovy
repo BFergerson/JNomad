@@ -23,13 +23,15 @@ import org.mapdb.DB
  */
 class QueryLiteralExtractor extends NomadExtractor {
 
+    public static boolean isDisabled = false //todo: better
     private TypeDeclaration queryType
     private foundQuery
     private foundDynamicQuery
     private possibleQueryList = new ArrayList<String>()
     private possibleDynamicQueryList = new ArrayList<String>()
     private extractorName = getClass().name
-    private queryCallRangeMap = new HashMap<String, int[]>()
+    private Map<String, int[]> queryCallRangeMap = new HashMap<>()
+    private Map<String, String> originalExpressionMap = new HashMap<>()
 
     QueryLiteralExtractor(CompilationUnit compilationUnit, File sourceFile, TypeSolver typeSolver, DB cache) {
         super(compilationUnit, sourceFile, typeSolver, cache)
@@ -66,6 +68,7 @@ class QueryLiteralExtractor extends NomadExtractor {
                                 def query = it.value.toLowerCase()
                                 possibleQueryList.add(query)
                                 queryCallRangeMap.put(query, toIntArray(methodCallExpr.range))
+                                originalExpressionMap.put(query, methodCallExpr.toString())
                             }
                             foundQuery = true
                         }
@@ -76,6 +79,7 @@ class QueryLiteralExtractor extends NomadExtractor {
                                 def query = it.toStringWithoutComments().toLowerCase()
                                 possibleDynamicQueryList.add(query)
                                 queryCallRangeMap.put(query, toIntArray(methodCallExpr.range))
+                                originalExpressionMap.put(query, methodCallExpr.toString())
                             }
                             foundDynamicQuery = true
                         }
@@ -126,6 +130,8 @@ class QueryLiteralExtractor extends NomadExtractor {
                     new TypeReference<List<String>>() {})
             queryCallRangeMap = new ObjectMapper().readValue(underMap.get("queryCallRangeMap"),
                     new TypeReference<Map<String, int[]>>() {})
+            originalExpressionMap = new ObjectMapper().readValue(underMap.get("originalExpressionMap"),
+                    new TypeReference<Map<String, String>>() {})
 
             foundQuery = !possibleQueryList.isEmpty()
             foundDynamicQuery = !possibleDynamicQueryList.isEmpty()
@@ -159,12 +165,20 @@ class QueryLiteralExtractor extends NomadExtractor {
         map.put("queryCallRangeMap", writer.toString())
 
         writer = new StringWriter()
+        new ObjectMapper().writeValue(writer, originalExpressionMap)
+        map.put("originalExpressionMap", writer.toString())
+
+        writer = new StringWriter()
         new ObjectMapper().writeValue(writer, map)
         fileHashMap.put(getFileChecksum(), writer.toString())
     }
 
     @Override
     void scan(SourceCodeExtract sourceCodeExtract, CompilationUnit compilationUnit) {
+        if (isDisabled) {
+            return
+        }
+
         //todo: probably a better way but for now just look for javax.persistence import
         for (ImportDeclaration importDeclaration : compilationUnit.imports) {
             if (importDeclaration.toStringWithoutComments().contains("javax.persistence")) {
@@ -199,6 +213,10 @@ class QueryLiteralExtractor extends NomadExtractor {
             returnList.add(it)
         }
         return returnList
+    }
+
+    String getQueryOriginalExpression(String query) {
+        return originalExpressionMap.get(query)
     }
 
     private static int[] toIntArray(Range range) {

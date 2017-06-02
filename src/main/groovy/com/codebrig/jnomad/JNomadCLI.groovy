@@ -9,7 +9,6 @@ import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
 import com.codebrig.jnomad.task.parse.QueryParser
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresQueryReport
 import com.codebrig.jnomad.utils.CodeLocator
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JreTypeSolver
 import com.google.common.base.MoreObjects
 import com.google.common.collect.ImmutableList
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
@@ -24,8 +23,8 @@ import java.util.concurrent.TimeUnit
  */
 class JNomadCLI {
 
-    public static final String JNOMAD_VERSION = "1.3/Alpha"
-    public static final String JNOMAD_BUILD_DATE = "2017.05.20"
+    public static final String JNOMAD_VERSION = "1.4/Alpha"
+    public static final String JNOMAD_BUILD_DATE = "2017.06.01"
 
     @Parameter(names = ["-f", "-log_file"], description = "Log console output to specified file")
     public String logFile
@@ -281,7 +280,6 @@ class JNomadCLI {
 
         //setup main type solver
         SourceCodeTypeSolver typeSolver = new SourceCodeTypeSolver()
-        typeSolver.add(new JreTypeSolver())
 
         //.Java source directories
         def tempRemoveList = new ArrayList<>()
@@ -410,23 +408,25 @@ class JNomadCLI {
     }
 
     private static
-    void calculatedExplainPlan(SourceCodeIndexReport indexReport, TreeMap<Double, PostgresExplain> reportMap, DescriptiveStatistics stats) {
+    void calculatedExplainPlan(SourceCodeIndexReport indexReport, TreeMap<Double, List<PostgresExplain>> reportMap, DescriptiveStatistics stats) {
         def top = reportMap.pollLastEntry()
         while (top != null) {
-            def val = top.value.calculateCostliestNode(Arrays.asList("Nested Loop", "Aggregate"))
-            val.costScore = top.key
-            indexReport.addCalculatedExplainPlan(val, stats)
+            for (PostgresExplain explain : top.value) {
+                def val = explain.calculateCostliestNode(Arrays.asList("Nested Loop", "Aggregate"))
+                val.costScore = top.key
+                indexReport.addCalculatedExplainPlan(val, stats)
 
-            val = top.value.calculateSlowestNode(Arrays.asList("Nested Loop", "Aggregate"))
-            val.costScore = top.key
-            indexReport.addCalculatedExplainPlan(val, stats)
+                val = explain.calculateSlowestNode(Arrays.asList("Nested Loop", "Aggregate"))
+                val.costScore = top.key
+                indexReport.addCalculatedExplainPlan(val, stats)
+            }
 
             top = reportMap.pollLastEntry()
         }
     }
 
     private static
-    void outputQueryScores(int offenderReportPercentage, TreeMap<Double, PostgresExplain> reportMap, DescriptiveStatistics stats) {
+    void outputQueryScores(int offenderReportPercentage, TreeMap<Double, List<PostgresExplain>> reportMap, DescriptiveStatistics stats) {
         int totalCount = reportMap.size()
         int reportCount = (offenderReportPercentage / 100) * totalCount
         int index = 0
@@ -435,11 +435,13 @@ class JNomadCLI {
         while (top != null) {
             stats.addValue(top.key)
             if (output) {
-                println "Score: " + top.key
-                println "\tOriginal query: " + top.value.originalQuery
-                println "\tExplained query: " + top.value.finalQuery
-                println "\tSource code file: " + top.value.sourceCodeExtract.queryLiteralExtractor.getClassName()
-                //println "\tExplain: " + top.value.toString()
+                for (PostgresExplain explain : top.value) {
+                    println "Score: " + top.key
+                    println "\tOriginal query: " + explain.originalQuery
+                    println "\tExplained query: " + explain.finalQuery
+                    println "\tSource code file: " + explain.sourceCodeExtract.queryLiteralExtractor.getClassName()
+                    //println "\tExplain: " + top.value.toString()
+                }
             }
 
             output = !(index++ >= reportCount)

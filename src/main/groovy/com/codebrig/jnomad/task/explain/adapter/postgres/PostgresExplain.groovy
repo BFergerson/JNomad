@@ -53,7 +53,7 @@ class PostgresExplain extends ExplainResult {
     }
 
     void setOriginalQuery(String originalQuery) {
-        this.originalQuery = originalQuery
+        this.originalQuery = Objects.requireNonNull(originalQuery)
     }
 
     String getOriginalQuery() {
@@ -61,7 +61,7 @@ class PostgresExplain extends ExplainResult {
     }
 
     void setFinalQuery(String finalQuery) {
-        this.finalQuery = finalQuery
+        this.finalQuery = Objects.requireNonNull(finalQuery)
     }
 
     String getFinalQuery() {
@@ -69,7 +69,7 @@ class PostgresExplain extends ExplainResult {
     }
 
     void setExplainedStatement(Statement explainedStatement) {
-        this.explainedStatement = explainedStatement
+        this.explainedStatement = Objects.requireNonNull(explainedStatement)
     }
 
     Statement getExplainedStatement() {
@@ -77,7 +77,7 @@ class PostgresExplain extends ExplainResult {
     }
 
     void setSourceCodeExtract(SourceCodeExtract sourceCodeExtract) {
-        this.sourceCodeExtract = sourceCodeExtract
+        this.sourceCodeExtract = Objects.requireNonNull(sourceCodeExtract)
     }
 
     SourceCodeExtract getSourceCodeExtract() {

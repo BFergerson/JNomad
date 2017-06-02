@@ -4,7 +4,6 @@ import com.codebrig.jnomad.JNomad;
 import com.codebrig.jnomad.SourceCodeTypeSolver;
 import com.codebrig.jnomad.model.*;
 import com.github.javaparser.Range;
-import com.github.javaparser.symbolsolver.resolution.typesolvers.JreTypeSolver;
 
 import java.io.File;
 import java.util.*;
@@ -17,7 +16,6 @@ public class ScanSingleFile {
     public static void main(String[] args) {
         //setup main type solver
         SourceCodeTypeSolver typeSolver = new SourceCodeTypeSolver();
-        typeSolver.add(new JreTypeSolver());
 
         //.Java source directories
         List<String> sourceDirectoryList = new ArrayList<>();

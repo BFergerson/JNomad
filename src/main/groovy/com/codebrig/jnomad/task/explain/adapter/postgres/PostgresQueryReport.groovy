@@ -37,7 +37,9 @@ class PostgresQueryReport extends QueryIndexReport {
     private List<String> missingRequiredColumnList = new ArrayList<>()
     private List<String> permissionDeniedTableList = new ArrayList<>()
     private List<String> failedQueryParseList = new ArrayList<>()
+    private Map<String, SourceCodeExtract> sourceCodeExtractMap = new HashMap<>()
     private Map<String, PostgresExplain> postgresExplainMap = new HashMap<>()
+    private Map<String, String> failedQueryReasonMap = new HashMap<>()
 
     PostgresQueryReport(JNomad jNomad, QueryParser queryParser) {
         super(jNomad)
@@ -141,6 +143,7 @@ class PostgresQueryReport extends QueryIndexReport {
                 for (Statement statement : extract.parsedQueryList) {
                     allQueryList.add(statement.toString())
                     def originalQuery = extract.getStatementOriginalQuery(statement)
+                    sourceCodeExtractMap.put(originalQuery, extract)
 
                     def query
                     try {
@@ -159,11 +162,13 @@ class PostgresQueryReport extends QueryIndexReport {
                         println ex.getMessage()
                         println "\tSource code file: " + extract.queryLiteralExtractor.getClassName()
                         failedQueryParseList.add(originalQuery)
+                        failedQueryReasonMap.put(originalQuery, ex.message)
                         continue
-                    } catch (Exception e) {
-                        e.printStackTrace()
+                    } catch (Exception ex) {
+                        ex.printStackTrace()
                         println "\tSource code file: " + extract.queryLiteralExtractor.getClassName()
                         failedQueryParseList.add(originalQuery)
+                        failedQueryReasonMap.put(originalQuery, ex.message)
                         continue
                     }
 
@@ -179,6 +184,9 @@ class PostgresQueryReport extends QueryIndexReport {
                                     continue //try next connection
                                 }
 
+                                failedQueryParseList.add(originalQuery)
+                                failedQueryReasonMap.put(originalQuery, ex.serverErrorMessage.message)
+
                                 missingRequiredColumnList.add(originalQuery)
                                 println "Missing required columns for query: " + query + "\n\tOriginal query: " + originalQuery + "\n\tReason: " + ex.serverErrorMessage.message
                                 println "\tSource code file: " + extract.queryLiteralExtractor.getClassName()
@@ -187,21 +195,29 @@ class PostgresQueryReport extends QueryIndexReport {
                                     continue //try next connection
                                 }
 
+                                failedQueryParseList.add(originalQuery)
+                                failedQueryReasonMap.put(originalQuery, ex.serverErrorMessage.message)
+
                                 missingRequiredTableList.add(originalQuery)
                                 println "Missing required tables for query: " + query + "\n\tOriginal query: " + originalQuery + "\n\tReason: " + ex.serverErrorMessage.message
                                 println "\tSource code file: " + extract.queryLiteralExtractor.getClassName()
                             } else if (ex.serverErrorMessage.routine == "aclcheck_error") {
+                                failedQueryParseList.add(originalQuery)
+                                failedQueryReasonMap.put(originalQuery, ex.serverErrorMessage.message)
+
                                 permissionDeniedTableList.add(originalQuery)
                                 println "Permission denied for query: " + query + "\n\tOriginal query: " + originalQuery + "\n\tReason: " + ex.serverErrorMessage.message
                                 println "\tSource code file: " + extract.queryLiteralExtractor.getClassName()
                             } else {
                                 failedQueryParseList.add(originalQuery)
+                                failedQueryReasonMap.put(originalQuery, ex.serverErrorMessage.message)
                                 println "Failed to execute explain on query: " + statement.toString() + "\n\tOriginal query: " + originalQuery + "\n\tReason: " + ex.serverErrorMessage.message
                                 println "\tSource code file: " + extract.queryLiteralExtractor.getClassName()
                             }
                         } catch (Exception ex) {
                             ex.printStackTrace()
                             failedQueryParseList.add(originalQuery)
+                            failedQueryReasonMap.put(originalQuery, ex.message)
                             println "Failed to execute explain on query: " + statement.toString() + "\n\tOriginal query: " + originalQuery + "\n\tReason: " + ex.message
                             println "\tSource code file: " + extract.queryLiteralExtractor.getClassName()
                         }
@@ -329,12 +345,25 @@ class PostgresQueryReport extends QueryIndexReport {
         return permissionDeniedTableList
     }
 
+    @Override
     List<String> getFailedQueryParseList() {
         return failedQueryParseList
     }
 
+    @Override
+    String getFailedQueryReason(String originalQuery) {
+        return failedQueryReasonMap.get(originalQuery)
+    }
+
+
+    @Override
     List<String> getSuccessfullyExplainedQueryList() {
         return successfullyExplainedQueryList
+    }
+
+    @Override
+    Map<String, SourceCodeExtract> getSourceCodeExtractMap() {
+        return sourceCodeExtractMap
     }
 
 }

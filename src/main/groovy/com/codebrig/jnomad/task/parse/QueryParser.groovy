@@ -1,6 +1,7 @@
 package com.codebrig.jnomad.task.parse
 
 import com.codebrig.jnomad.JNomad
+import com.codebrig.jnomad.SourceCodeTypeSolver
 import com.codebrig.jnomad.model.SourceCodeExtract
 import com.codebrig.jnomad.task.parse.rank.ColumnHitMap
 import com.codebrig.jnomad.task.parse.rank.TableRank
@@ -9,7 +10,6 @@ import com.codebrig.jnomad.utils.CodeLocator
 import com.codebrig.jnomad.utils.QueryCleaner
 import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
-import com.github.javaparser.symbolsolver.javaparser.Navigator
 import net.sf.jsqlparser.parser.CCJSqlParserUtil
 import net.sf.jsqlparser.statement.Statement
 import net.sf.jsqlparser.statement.delete.Delete
@@ -32,19 +32,21 @@ class QueryParser {
         }
     }
 
-    private JNomad jNomad
     private Map<String, String> tableNameAliasMap
     private Map<String, String> columnNameAliasMap
     private Map<String, ParseResult> staticExprMap
     private Map<String, ParseResult> dynamicExprMap
     private List<ColumnHitMap> columnRankList
     private Map<String, TableRank> tableRankSet
+    private List<SourceCodeExtract> scannedFileList
+    private SourceCodeTypeSolver typeSolver
 
     private int parsedQueryCount = 0
     private int failedQueryCount = 0
 
-    QueryParser(JNomad jNomad) {
-        this.jNomad = jNomad
+    public QueryParser(JNomad jNomad) {
+        this.scannedFileList = jNomad.scannedFileList
+        this.typeSolver = jNomad.getTypeSolver()
     }
 
     def run() {
@@ -52,9 +54,15 @@ class QueryParser {
         columnNameAliasMap = new HashMap<>()
         staticExprMap = new HashMap<>()
         dynamicExprMap = new HashMap<>()
+        columnRankList = new ArrayList<>()
+        tableRankSet = new HashMap<>()
 
+        run(scannedFileList)
+    }
+
+    def run(List<SourceCodeExtract> scannedFileList) {
         def map = new HashMap<String, SourceCodeExtract>()
-        for (SourceCodeExtract visitor : jNomad.scannedFileList) {
+        for (SourceCodeExtract visitor : scannedFileList) {
             //query literals
             def queryExtractor = visitor.queryLiteralExtractor
 
@@ -94,14 +102,14 @@ class QueryParser {
         }
 
         //extends thing
-        for (SourceCodeExtract visitor : jNomad.scannedFileList) {
+        for (SourceCodeExtract visitor : scannedFileList) {
             //column aliases
             def queryColumnAlias = visitor.queryColumnAliasExtractor
             if (!queryColumnAlias.columnNameAliasMap.isEmpty()) {
                 def classExtendsPath = queryColumnAlias.extendsClassPath
                 if (!classExtendsPath.isEmpty()) {
                     classExtendsPath.each {
-                        ClassOrInterfaceDeclaration declaration = CodeLocator.locateClassOrInterfaceDeclaration(jNomad.typeSolver, it)
+                        ClassOrInterfaceDeclaration declaration = CodeLocator.locateClassOrInterfaceDeclaration(typeSolver, it)
                         if (declaration != null) {
                             CompilationUnit unit = CodeLocator.demandCompilationUnit(declaration)
                             def qualifiedName = ""
@@ -128,13 +136,13 @@ class QueryParser {
         }
 
         //embeddables
-        for (SourceCodeExtract visitor : jNomad.scannedFileList) {
+        for (SourceCodeExtract visitor : scannedFileList) {
             //column aliases
             def queryColumnAlias = visitor.queryColumnAliasExtractor
             def joinExtractor = visitor.queryColumnJoinExtractor
             if (!joinExtractor.embeddedJoinTableTypeMap.isEmpty()) {
                 joinExtractor.embeddedJoinTableTypeMap.each {
-                    def embedExtract = CodeLocator.getJPAEmbeddableSourceCodeExtract(jNomad, it.value)
+                    def embedExtract = CodeLocator.getJPAEmbeddableSourceCodeExtract(scannedFileList, it.value)
                     if (embedExtract != null) {
                         def value = embedExtract.getQueryColumnAliasExtractor()
                         value.columnNameAliasMap.each {
@@ -152,7 +160,6 @@ class QueryParser {
         }
 
         //get column hit counts
-        tableRankSet = new HashMap<>()
         staticExprMap.each {
             Statement statement
             Select selectStatement
@@ -265,7 +272,6 @@ class QueryParser {
             }
         }
 
-        columnRankList = new ArrayList<>()
         for (TableRank tableRank : tableRankSet.values()) {
             for (def hitMap : tableRank.allColumnHitMaps) {
                 columnRankList.add(hitMap)

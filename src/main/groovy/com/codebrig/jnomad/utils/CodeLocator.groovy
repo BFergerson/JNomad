@@ -286,7 +286,11 @@ class CodeLocator {
     }
 
     static SourceCodeExtract getJPAEmbeddableSourceCodeExtract(JNomad jNomad, String className) {
-        for (SourceCodeExtract extract : jNomad.scannedFileList) {
+        return getJPAEmbeddableSourceCodeExtract(jNomad.scannedFileList, className)
+    }
+
+    static SourceCodeExtract getJPAEmbeddableSourceCodeExtract(List<SourceCodeExtract> scannedFileList, String className) {
+        for (SourceCodeExtract extract : scannedFileList) {
             if (extract.JPAEmbeddable && extract.queryColumnAliasExtractor.className == className) {
                 return extract
             }

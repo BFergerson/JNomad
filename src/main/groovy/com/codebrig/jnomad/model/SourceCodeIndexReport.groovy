@@ -9,11 +9,11 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
  */
 class SourceCodeIndexReport {
 
-    private TreeMap<Double, PostgresExplain> totalCostMap = new TreeMap<>()
-    private TreeMap<Double, PostgresExplain> startupCostMap = new TreeMap<>()
-    private TreeMap<Double, PostgresExplain> totalRuntimeMap = new TreeMap<>()
-    private TreeMap<Double, PostgresExplain> executionTimeMap = new TreeMap<>()
-    private TreeMap<Double, PostgresExplain> sequenceScanMap = new TreeMap<>()
+    private TreeMap<Double, List<PostgresExplain>> totalCostMap = new TreeMap<>()
+    private TreeMap<Double, List<PostgresExplain>> startupCostMap = new TreeMap<>()
+    private TreeMap<Double, List<PostgresExplain>> totalRuntimeMap = new TreeMap<>()
+    private TreeMap<Double, List<PostgresExplain>> executionTimeMap = new TreeMap<>()
+    private TreeMap<Double, List<PostgresExplain>> sequenceScanMap = new TreeMap<>()
 
     private IndexRecommendation indexRecommendation = new IndexRecommendation()
 
@@ -22,51 +22,76 @@ class SourceCodeIndexReport {
     }
 
     void addTotalCost(Double key, PostgresExplain value) {
-        this.totalCostMap.put(key, value)
+        List<PostgresExplain> explainList = totalCostMap.get(key)
+        if (explainList == null) {
+            explainList = new ArrayList<>()
+            totalCostMap.put(key, explainList)
+        }
+        explainList.add(value)
     }
 
     void addStartupCost(Double key, PostgresExplain value) {
-        this.startupCostMap.put(key, value)
+        List<PostgresExplain> explainList = startupCostMap.get(key)
+        if (explainList == null) {
+            explainList = new ArrayList<>()
+            startupCostMap.put(key, explainList)
+        }
+        explainList.add(value)
     }
 
     void addTotalRuntime(Double key, PostgresExplain value) {
-        this.totalRuntimeMap.put(key, value)
+        List<PostgresExplain> explainList = totalRuntimeMap.get(key)
+        if (explainList == null) {
+            explainList = new ArrayList<>()
+            totalRuntimeMap.put(key, explainList)
+        }
+        explainList.add(value)
     }
 
     void addExecutionTime(Double key, PostgresExplain value) {
-        this.executionTimeMap.put(key, value)
+        List<PostgresExplain> explainList = executionTimeMap.get(key)
+        if (explainList == null) {
+            explainList = new ArrayList<>()
+            executionTimeMap.put(key, explainList)
+        }
+        explainList.add(value)
     }
 
     void addSequenceScan(Double key, PostgresExplain value) {
-        this.sequenceScanMap.put(key, value)
+        List<PostgresExplain> explainList = sequenceScanMap.get(key)
+        if (explainList == null) {
+            explainList = new ArrayList<>()
+            sequenceScanMap.put(key, explainList)
+        }
+        explainList.add(value)
     }
 
-    TreeMap<Double, PostgresExplain> getTotalCostMap() {
-        def map = new TreeMap<Double, PostgresExplain>()
+    TreeMap<Double, List<PostgresExplain>> getTotalCostMap() {
+        def map = new TreeMap<Double, List<PostgresExplain>>()
         map.putAll(totalCostMap)
         return map
     }
 
-    TreeMap<Double, PostgresExplain> getStartupCostMap() {
-        def map = new TreeMap<Double, PostgresExplain>()
+    TreeMap<Double, List<PostgresExplain>> getStartupCostMap() {
+        def map = new TreeMap<Double, List<PostgresExplain>>()
         map.putAll(startupCostMap)
         return map
     }
 
-    TreeMap<Double, PostgresExplain> getTotalRuntimeMap() {
-        def map = new TreeMap<Double, PostgresExplain>()
+    TreeMap<Double, List<PostgresExplain>> getTotalRuntimeMap() {
+        def map = new TreeMap<Double, List<PostgresExplain>>()
         map.putAll(totalRuntimeMap)
         return map
     }
 
-    TreeMap<Double, PostgresExplain> getExecutionTimeMap() {
-        def map = new TreeMap<Double, PostgresExplain>()
+    TreeMap<Double, List<PostgresExplain>> getExecutionTimeMap() {
+        def map = new TreeMap<Double, List<PostgresExplain>>()
         map.putAll(executionTimeMap)
         return map
     }
 
-    TreeMap<Double, PostgresExplain> getSequenceScanMap() {
-        def map = new TreeMap<Double, PostgresExplain>()
+    TreeMap<Double, List<PostgresExplain>> getSequenceScanMap() {
+        def map = new TreeMap<Double, List<PostgresExplain>>()
         map.putAll(sequenceScanMap)
         return map
     }

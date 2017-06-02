@@ -12,9 +12,11 @@ class RecommendedIndex {
     private String indexTable
     private String indexCondition
     private final Map<File, Range> indexAffectMap
+    private final Set<String> indexAffectOriginalQuerySet
 
     public RecommendedIndex() {
         indexAffectMap = new HashMap<>()
+        indexAffectOriginalQuerySet = new HashSet<>()
     }
 
     RecommendedIndex(String indexCreateSQL, double indexPriority, String indexTable, String indexCondition) {
@@ -22,7 +24,8 @@ class RecommendedIndex {
         this.indexPriority = indexPriority
         this.indexTable = indexTable
         this.indexCondition = indexCondition
-        indexAffectMap = new HashMap<>()
+        this.indexAffectMap = new HashMap<>()
+        this.indexAffectOriginalQuerySet = new HashSet<>()
     }
 
     String getIndexCreateSQL() {
@@ -57,12 +60,17 @@ class RecommendedIndex {
         this.indexCondition = indexCondition
     }
 
-    public void addToIndexAffectMap(File file, Range range) {
+    public void addToIndexAffectMap(File file, Range range, String originalQuery) {
         indexAffectMap.put(file, range)
+        indexAffectOriginalQuerySet.add(originalQuery)
     }
 
     Map<File, Range> getIndexAffectMap() {
         return indexAffectMap
+    }
+
+    boolean isIndexAffect(String originalQuery) {
+        return indexAffectOriginalQuerySet.contains(originalQuery)
     }
 
 }

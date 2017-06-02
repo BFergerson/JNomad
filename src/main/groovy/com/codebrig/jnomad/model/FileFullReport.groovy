@@ -1,10 +1,11 @@
-package com.codebrig.jnomad.model;
+package com.codebrig.jnomad.model
 
-import com.codebrig.jnomad.JNomad;
+import com.codebrig.jnomad.JNomad
+import com.codebrig.jnomad.task.explain.QueryIndexReport
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresQueryReport
-import com.codebrig.jnomad.task.parse.QueryParser;
-import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import com.codebrig.jnomad.task.parse.QueryParser
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import org.apache.commons.math3.util.Precision
 
 /**
@@ -15,16 +16,26 @@ public class FileFullReport {
     private final File file
     private final List<QueryScore> queryScoreList
     private final List<RecommendedIndex> recommendedIndexList
+    private final QueryIndexReport queryIndexReport
 
     public FileFullReport(File file, JNomad jNomad) {
         this.file = file
         queryScoreList = new ArrayList<>()
         recommendedIndexList = new ArrayList<>()
 
-        QueryParser queryParser = new QueryParser(jNomad);
-        queryParser.run();
-        PostgresQueryReport reportAdapter = new PostgresQueryReport(jNomad, queryParser);
-        SourceCodeIndexReport report = reportAdapter.createSourceCodeIndexReport();
+        QueryParser queryParser = new QueryParser(jNomad)
+        queryParser.run()
+        queryIndexReport = new PostgresQueryReport(jNomad, queryParser)
+        SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport()
+        reportQueriesTask(jNomad, report)
+    }
+
+    public FileFullReport(File file, JNomad jNomad, QueryParser queryParser) {
+        this.file = file
+        queryScoreList = new ArrayList<>()
+        recommendedIndexList = new ArrayList<>()
+        queryIndexReport = new PostgresQueryReport(jNomad, queryParser)
+        SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport()
         reportQueriesTask(jNomad, report)
     }
 
@@ -69,7 +80,7 @@ public class FileFullReport {
                     def literalExtractor = it.postgresExplain.sourceCodeExtract.queryLiteralExtractor
                     def range = literalExtractor.getQueryCallRange(it.postgresExplain.originalQuery)
                     if (!locationSet.contains(range)) {
-                        rIndex.addToIndexAffectMap(literalExtractor.sourceFile, range)
+                        rIndex.addToIndexAffectMap(literalExtractor.sourceFile, range, it.postgresExplain.originalQuery)
                     }
                     locationSet.add(range)
                 }
@@ -79,39 +90,44 @@ public class FileFullReport {
     }
 
     private static
-    void calculatedExplainPlan(SourceCodeIndexReport indexReport, TreeMap<Double, PostgresExplain> reportMap, DescriptiveStatistics stats) {
+    void calculatedExplainPlan(SourceCodeIndexReport indexReport, TreeMap<Double, List<PostgresExplain>> reportMap, DescriptiveStatistics stats) {
         def top = reportMap.pollLastEntry()
         while (top != null) {
-            def val = top.value.calculateCostliestNode(Arrays.asList("Nested Loop", "Aggregate"))
-            val.costScore = top.key
-            indexReport.addCalculatedExplainPlan(val, stats)
+            for (PostgresExplain explain : top.value) {
+                def val = explain.calculateCostliestNode(Arrays.asList("Nested Loop", "Aggregate"))
+                val.costScore = top.key
+                indexReport.addCalculatedExplainPlan(val, stats)
 
-            val = top.value.calculateSlowestNode(Arrays.asList("Nested Loop", "Aggregate"))
-            val.costScore = top.key
-            indexReport.addCalculatedExplainPlan(val, stats)
+                val = explain.calculateSlowestNode(Arrays.asList("Nested Loop", "Aggregate"))
+                val.costScore = top.key
+                indexReport.addCalculatedExplainPlan(val, stats)
+            }
 
             top = reportMap.pollLastEntry()
         }
     }
 
-    private void calculateQueryScores(TreeMap<Double, PostgresExplain> reportMap, DescriptiveStatistics stats) {
+    private void calculateQueryScores(TreeMap<Double, List<PostgresExplain>> reportMap, DescriptiveStatistics stats) {
         def top = reportMap.pollLastEntry()
         while (top != null) {
             stats.addValue(top.key)
 
-            QueryScore queryScore = new QueryScore()
-            queryScore.score = top.key
-            queryScore.originalQuery = top.value.originalQuery
-            queryScore.explainedQuery = top.value.finalQuery
-            queryScore.sourceCodeExtract = top.value.sourceCodeExtract
-            queryScore.explain = top.value
-            queryScore.queryFile = file
+            for (PostgresExplain explain : top.value) {
+                QueryScore queryScore = new QueryScore()
+                queryScore.score = top.key
+                queryScore.originalQuery = explain.originalQuery
+                queryScore.explainedQuery = explain.finalQuery
+                queryScore.sourceCodeExtract = explain.sourceCodeExtract
+                queryScore.explain = explain
+                queryScore.queryFile = file
 
-            def literalExtractor = top.value.sourceCodeExtract.queryLiteralExtractor
-            def range = literalExtractor.getQueryCallRange(top.value.originalQuery)
-            queryScore.queryLocation = range
+                def literalExtractor = explain.sourceCodeExtract.queryLiteralExtractor
+                def range = literalExtractor.getQueryCallRange(explain.originalQuery)
+                queryScore.queryLocation = range
 
-            queryScoreList.add(queryScore)
+                queryScoreList.add(queryScore)
+            }
+
             top = reportMap.pollLastEntry()
         }
     }
@@ -126,6 +142,10 @@ public class FileFullReport {
 
     List<RecommendedIndex> getRecommendedIndexList() {
         return recommendedIndexList
+    }
+
+    QueryIndexReport getQueryIndexReport() {
+        return queryIndexReport
     }
 
     List<QueryScore> getQueryScoreList() {

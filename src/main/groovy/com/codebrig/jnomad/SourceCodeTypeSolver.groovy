@@ -10,6 +10,7 @@ import com.github.javaparser.symbolsolver.model.resolution.SymbolReference
 import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
 import com.github.javaparser.symbolsolver.resolution.typesolvers.JarTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JreTypeSolver
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.google.common.io.Files
@@ -34,6 +35,7 @@ class SourceCodeTypeSolver extends CombinedTypeSolver {
 
     SourceCodeTypeSolver(TypeSolver... elements) {
         super(elements)
+        add(new JreTypeSolver());
     }
 
     @Override
