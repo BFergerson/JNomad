@@ -5,7 +5,9 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import com.codebrig.jnomad.model.SourceCodeExtract
 import com.codebrig.jnomad.model.SourceCodeIndexReport
+import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresDatabaseDataType
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
+import com.codebrig.jnomad.task.parse.QueryEntityAliasMap
 import com.codebrig.jnomad.task.parse.QueryParser
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresQueryReport
 import com.codebrig.jnomad.utils.CodeLocator
@@ -145,7 +147,7 @@ class JNomadCLI {
         JNomad jNomad = setupJNomadTask(main, commander)
         collectQueriesTask(jNomad)
         def queryParser = parseQueriesTask(jNomad)
-        def indexReport = explainQueriesTask(jNomad, queryParser)
+        def indexReport = explainQueriesTask(jNomad, queryParser.aliasMap)
         reportQueriesTask(jNomad, indexReport)
 
         println "${breaker()}JNomad {${JNOMAD_VERSION}}: All tasks finished!\n\t\t - Total runtime: ${getRuntime(startTime)}${breaker()}"
@@ -171,12 +173,12 @@ class JNomadCLI {
         return queryParser
     }
 
-    private static SourceCodeIndexReport explainQueriesTask(JNomad jNomad, QueryParser queryParser) {
+    private static SourceCodeIndexReport explainQueriesTask(JNomad jNomad, QueryEntityAliasMap aliasMap) {
         println "${breaker()}JNomad {${JNOMAD_VERSION}}: Running PostgreSQL explains...${breaker()}"
         long startTime = System.currentTimeMillis()
 
-        def reportAdapter = new PostgresQueryReport(jNomad, queryParser)
-        def report = reportAdapter.createSourceCodeIndexReport()
+        def reportAdapter = new PostgresQueryReport(jNomad, new PostgresDatabaseDataType(), aliasMap)
+        def report = reportAdapter.createSourceCodeIndexReport(jNomad.scannedFileList)
 
         int allQueryCount = reportAdapter.allQueryList.size()
         int emptyWhereClauseCount = reportAdapter.emptyWhereClauseList.size()

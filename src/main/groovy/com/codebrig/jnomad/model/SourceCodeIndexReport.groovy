@@ -25,45 +25,45 @@ class SourceCodeIndexReport {
         List<PostgresExplain> explainList = totalCostMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
-            totalCostMap.put(key, explainList)
+            totalCostMap.put(Objects.requireNonNull(key), explainList)
         }
-        explainList.add(value)
+        explainList.add(Objects.requireNonNull(value))
     }
 
     void addStartupCost(Double key, PostgresExplain value) {
         List<PostgresExplain> explainList = startupCostMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
-            startupCostMap.put(key, explainList)
+            startupCostMap.put(Objects.requireNonNull(key), explainList)
         }
-        explainList.add(value)
+        explainList.add(Objects.requireNonNull(value))
     }
 
     void addTotalRuntime(Double key, PostgresExplain value) {
         List<PostgresExplain> explainList = totalRuntimeMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
-            totalRuntimeMap.put(key, explainList)
+            totalRuntimeMap.put(Objects.requireNonNull(key), explainList)
         }
-        explainList.add(value)
+        explainList.add(Objects.requireNonNull(value))
     }
 
     void addExecutionTime(Double key, PostgresExplain value) {
         List<PostgresExplain> explainList = executionTimeMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
-            executionTimeMap.put(key, explainList)
+            executionTimeMap.put(Objects.requireNonNull(key), explainList)
         }
-        explainList.add(value)
+        explainList.add(Objects.requireNonNull(value))
     }
 
     void addSequenceScan(Double key, PostgresExplain value) {
         List<PostgresExplain> explainList = sequenceScanMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
-            sequenceScanMap.put(key, explainList)
+            sequenceScanMap.put(Objects.requireNonNull(key), explainList)
         }
-        explainList.add(value)
+        explainList.add(Objects.requireNonNull(value))
     }
 
     TreeMap<Double, List<PostgresExplain>> getTotalCostMap() {
@@ -97,7 +97,7 @@ class SourceCodeIndexReport {
     }
 
     void addCalculatedExplainPlan(CalculatedExplainPlan calculatedExplainPlan, DescriptiveStatistics stats) {
-        indexRecommendation.determineBestIndex(calculatedExplainPlan, stats)
+        indexRecommendation.determineBestIndex(Objects.requireNonNull(calculatedExplainPlan), Objects.requireNonNull(stats))
     }
 
 }

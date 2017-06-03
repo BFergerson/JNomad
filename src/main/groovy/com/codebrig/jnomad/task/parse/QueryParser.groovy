@@ -32,8 +32,7 @@ class QueryParser {
         }
     }
 
-    private Map<String, String> tableNameAliasMap
-    private Map<String, String> columnNameAliasMap
+    private QueryEntityAliasMap aliasMap
     private Map<String, ParseResult> staticExprMap
     private Map<String, ParseResult> dynamicExprMap
     private List<ColumnHitMap> columnRankList
@@ -50,8 +49,7 @@ class QueryParser {
     }
 
     def run() {
-        tableNameAliasMap = new HashMap<>()
-        columnNameAliasMap = new HashMap<>()
+        aliasMap = new QueryEntityAliasMap()
         staticExprMap = new HashMap<>()
         dynamicExprMap = new HashMap<>()
         columnRankList = new ArrayList<>()
@@ -86,7 +84,7 @@ class QueryParser {
             //table aliases
             def queryTableAlias = visitor.queryTableAliasExtractor
             if (!queryTableAlias.tableNameAliasMap.isEmpty()) {
-                tableNameAliasMap.putAll(queryTableAlias.tableNameAliasMap)
+                aliasMap.putAllTableNameAlias(queryTableAlias.tableNameAliasMap)
             }
 
             //column aliases
@@ -94,8 +92,8 @@ class QueryParser {
             if (!queryColumnAlias.columnNameAliasMap.isEmpty()) {
                 map.put(queryColumnAlias.qualifiedClassName, visitor)
                 queryColumnAlias.columnNameAliasMap.each {
-                    columnNameAliasMap.put(
-                            tableNameAliasMap.get(queryColumnAlias.className.toLowerCase(), queryColumnAlias.className.toLowerCase()) + "." + it.key,
+                    aliasMap.addTableColumnNameAlias(
+                            aliasMap.getTableName(queryColumnAlias.className.toLowerCase()) + "." + it.key,
                             it.value)
                 }
             }
@@ -120,8 +118,8 @@ class QueryParser {
                             def value = map.get(qualifiedName)
                             if (value != null) {
                                 value.queryColumnAliasExtractor.columnNameAliasMap.each {
-                                    columnNameAliasMap.put(
-                                            tableNameAliasMap.get(queryColumnAlias.className.toLowerCase(), queryColumnAlias.className.toLowerCase()) + "." + it.key,
+                                    aliasMap.addTableColumnNameAlias(
+                                            aliasMap.getTableName(queryColumnAlias.className.toLowerCase()) + "." + it.key,
                                             it.value)
 
                                     //add to extract's column alias extractor
@@ -146,8 +144,8 @@ class QueryParser {
                     if (embedExtract != null) {
                         def value = embedExtract.getQueryColumnAliasExtractor()
                         value.columnNameAliasMap.each {
-                            columnNameAliasMap.put(
-                                    tableNameAliasMap.get(queryColumnAlias.className.toLowerCase(), queryColumnAlias.className.toLowerCase()) + "." + it.key,
+                            aliasMap.addTableColumnNameAlias(
+                                    aliasMap.getTableName(queryColumnAlias.className.toLowerCase()) + "." + it.key,
                                     it.value)
 
                             //add to extract's column alias extractor
@@ -159,117 +157,8 @@ class QueryParser {
             }
         }
 
-        //get column hit counts
         staticExprMap.each {
-            Statement statement
-            Select selectStatement
-            TablesNamesFinder tablesNamesFinder
-            try {
-                def cleanSQL = QueryCleaner.cleanQueryParse(it.key)
-
-                parsedQueryCount++
-                statement = CCJSqlParserUtil.parse(cleanSQL)
-
-                if (statement instanceof Select) {
-                    selectStatement = (Select) statement
-                    tablesNamesFinder = new TablesNamesFinder()
-                    List<String> tableList = tablesNamesFinder.getTableList(selectStatement)
-
-                    //get table name (ensure isn't alias)
-                    def tableName = tableList.get(0).toLowerCase().replace("public.", "") //todo: don't hardcode
-                    def tableNameAlias = tableNameAliasMap.get(tableName)
-                    if (tableNameAlias != null) {
-                        tableName = tableNameAlias
-                    }
-
-                    TableRank tableRank = tableRankSet.get(tableName)
-                    if (tableRank == null) {
-                        tableRank = new TableRank(tableName)
-                        tableRankSet.put(tableName, tableRank)
-                    }
-
-                    //column aliases
-                    columnNameAliasMap.each {
-                        if (it.key.startsWith(tableRank.tableName + ".")) {
-                            tableRank.addColumnAlias(it.key.replace(tableRank.tableName + ".", ""), it.value)
-                        }
-                    }
-
-                    TableRankVisitor rankVisitor = new TableRankVisitor(tableRank, it.value.queryList.size())
-                    selectStatement.getSelectBody().accept(rankVisitor)
-                    it.value.extract.addParsedQuery(selectStatement, it.key)
-                } else if (statement instanceof Update) {
-                    Update updateStatement = (Update) statement
-                    tablesNamesFinder = new TablesNamesFinder()
-                    List<String> tableList = tablesNamesFinder.getTableList(updateStatement)
-
-                    //get table name (ensure isn't alias)
-                    def tableName = tableList.get(0).toLowerCase().replace("public.", "") //todo: don't hardcode
-                    def tableNameAlias = tableNameAliasMap.get(tableName.toLowerCase())
-                    if (tableNameAlias != null) {
-                        tableName = tableNameAlias
-                    }
-
-                    TableRank tableRank = tableRankSet.get(tableName)
-                    if (tableRank == null) {
-                        tableRank = new TableRank(tableName)
-                        tableRankSet.put(tableName, tableRank)
-                    }
-
-                    //column aliases
-                    columnNameAliasMap.each {
-                        if (it.key.startsWith(tableRank.tableName + ".")) {
-                            tableRank.addColumnAlias(it.key.replace(tableRank.tableName + ".", ""), it.value)
-                        }
-                    }
-
-                    TableRankVisitor rankVisitor = new TableRankVisitor(tableRank, it.value.queryList.size())
-                    if (updateStatement.where != null) {
-                        updateStatement.where.accept(rankVisitor)
-                    }
-                    it.value.extract.addParsedQuery(updateStatement, it.key)
-                } else if (statement instanceof Delete) {
-                    Delete deleteStatement = (Delete) statement
-                    tablesNamesFinder = new TablesNamesFinder()
-                    List<String> tableList = tablesNamesFinder.getTableList(deleteStatement)
-
-                    //get table name (ensure isn't alias)
-                    def tableName = tableList.get(0).toLowerCase().replace("public.", "") //todo: don't hardcode
-                    def tableNameAlias = tableNameAliasMap.get(tableName.toLowerCase())
-                    if (tableNameAlias != null) {
-                        tableName = tableNameAlias
-                    }
-
-                    TableRank tableRank = tableRankSet.get(tableName)
-                    if (tableRank == null) {
-                        tableRank = new TableRank(tableName)
-                        tableRankSet.put(tableName, tableRank)
-                    }
-
-                    //column aliases
-                    columnNameAliasMap.each {
-                        if (it.key.startsWith(tableRank.tableName + ".")) {
-                            tableRank.addColumnAlias(it.key.replace(tableRank.tableName + ".", ""), it.value)
-                        }
-                    }
-
-                    TableRankVisitor rankVisitor = new TableRankVisitor(tableRank, it.value.queryList.size())
-                    if (deleteStatement.where != null) {
-                        deleteStatement.where.accept(rankVisitor)
-                    }
-                    it.value.extract.addParsedQuery(deleteStatement, it.key)
-                } else {
-                    println "Skipped parsing query: " + statement
-                    println "\tSource code file: " + it.value.extract.queryLiteralExtractor.getClassName()
-                    failedQueryCount++
-                    parsedQueryCount--
-                }
-            } catch (Throwable ex) {
-                failedQueryCount++
-                parsedQueryCount--
-                println "Failed to parse query: " + it.key.replace("\"", "")
-                println "\tSource code file: " + it.value.extract.queryLiteralExtractor.getClassName()
-            }
+            parseQuery(it.key, it.value)
         }
 
         for (TableRank tableRank : tableRankSet.values()) {
@@ -279,20 +168,120 @@ class QueryParser {
         }
     }
 
-    String getQualifiedColumnName(String tableName, String columnName) {
-        def name = columnNameAliasMap.get(getQualifiedTableName(tableName) + "." + columnName)
-        if (name != null) {
-            return name
-        }
-        return columnName
-    }
+    private void parseQuery(String originalQuery, ParseResult result) {
+        Statement statement
+        Select selectStatement
+        TablesNamesFinder tablesNamesFinder
 
-    String getQualifiedTableName(String tableName) {
-        def name = tableNameAliasMap.get(tableName.toLowerCase())
-        if (name != null) {
-            return name
+        try {
+            def cleanSQL = QueryCleaner.cleanQueryParse(originalQuery)
+            parsedQueryCount++
+            println "Parsing query: " + cleanSQL
+
+            statement = CCJSqlParserUtil.parse(cleanSQL)
+            if (statement instanceof Select) {
+                selectStatement = (Select) statement
+                tablesNamesFinder = new TablesNamesFinder()
+                List<String> tableList = tablesNamesFinder.getTableList(selectStatement)
+
+                //get table name (ensure isn't alias)
+                def tableName = tableList.get(0).toLowerCase().replace("public.", "") //todo: don't hardcode
+                def tableNameAlias = aliasMap.getTableName(tableName)
+                if (tableNameAlias != null) {
+                    tableName = tableNameAlias
+                }
+
+                //get column hit counts
+                TableRank tableRank = tableRankSet.get(tableName)
+                if (tableRank == null) {
+                    tableRank = new TableRank(tableName)
+                    tableRankSet.put(tableName, tableRank)
+                }
+
+                //column aliases
+                aliasMap.columnNameAliasMap.each {
+                    if (it.key.startsWith(tableRank.tableName + ".")) {
+                        tableRank.addColumnAlias(it.key.replace(tableRank.tableName + ".", ""), it.value)
+                    }
+                }
+
+                TableRankVisitor rankVisitor = new TableRankVisitor(tableRank, result.queryList.size())
+                selectStatement.getSelectBody().accept(rankVisitor)
+                result.extract.addParsedQuery(selectStatement, originalQuery)
+            } else if (statement instanceof Update) {
+                Update updateStatement = (Update) statement
+                tablesNamesFinder = new TablesNamesFinder()
+                List<String> tableList = tablesNamesFinder.getTableList(updateStatement)
+
+                //get table name (ensure isn't alias)
+                def tableName = tableList.get(0).toLowerCase().replace("public.", "") //todo: don't hardcode
+                def tableNameAlias = aliasMap.getTableName(tableName)
+                if (tableNameAlias != null) {
+                    tableName = tableNameAlias
+                }
+
+                //get column hit counts
+                TableRank tableRank = tableRankSet.get(tableName)
+                if (tableRank == null) {
+                    tableRank = new TableRank(tableName)
+                    tableRankSet.put(tableName, tableRank)
+                }
+
+                //column aliases
+                aliasMap.columnNameAliasMap.each {
+                    if (it.key.startsWith(tableRank.tableName + ".")) {
+                        tableRank.addColumnAlias(it.key.replace(tableRank.tableName + ".", ""), it.value)
+                    }
+                }
+
+                TableRankVisitor rankVisitor = new TableRankVisitor(tableRank, result.queryList.size())
+                if (updateStatement.where != null) {
+                    updateStatement.where.accept(rankVisitor)
+                }
+                result.extract.addParsedQuery(updateStatement, originalQuery)
+            } else if (statement instanceof Delete) {
+                Delete deleteStatement = (Delete) statement
+                tablesNamesFinder = new TablesNamesFinder()
+                List<String> tableList = tablesNamesFinder.getTableList(deleteStatement)
+
+                //get table name (ensure isn't alias)
+                def tableName = tableList.get(0).toLowerCase().replace("public.", "") //todo: don't hardcode
+                def tableNameAlias = aliasMap.getTableName(tableName)
+                if (tableNameAlias != null) {
+                    tableName = tableNameAlias
+                }
+
+                //get column hit counts
+                TableRank tableRank = tableRankSet.get(tableName)
+                if (tableRank == null) {
+                    tableRank = new TableRank(tableName)
+                    tableRankSet.put(tableName, tableRank)
+                }
+
+                //column aliases
+                aliasMap.columnNameAliasMap.each {
+                    if (it.key.startsWith(tableRank.tableName + ".")) {
+                        tableRank.addColumnAlias(it.key.replace(tableRank.tableName + ".", ""), it.value)
+                    }
+                }
+
+                TableRankVisitor rankVisitor = new TableRankVisitor(tableRank, result.queryList.size())
+                if (deleteStatement.where != null) {
+                    deleteStatement.where.accept(rankVisitor)
+                }
+                result.extract.addParsedQuery(deleteStatement, originalQuery)
+            } else {
+                println "Skipped parsing query: " + statement
+                println "\tSource code file: " + result.extract.queryLiteralExtractor.getClassName()
+                failedQueryCount++
+                parsedQueryCount--
+            }
+        } catch (Throwable ex) {
+            failedQueryCount++
+            parsedQueryCount--
+            println "Failed to parse query: " + originalQuery.replace("\"", "")
+            println "\tSource code file: " + result.extract.queryLiteralExtractor.getClassName()
         }
-        return tableName
     }
 
     int getParsedQueryCount() {
@@ -369,6 +358,10 @@ class QueryParser {
 
     List<ColumnHitMap> getColumnRankList() {
         return columnRankList
+    }
+
+    QueryEntityAliasMap getAliasMap() {
+        return aliasMap
     }
 
 }

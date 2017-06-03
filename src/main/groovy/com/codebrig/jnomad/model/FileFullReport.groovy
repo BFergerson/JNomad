@@ -1,9 +1,12 @@
 package com.codebrig.jnomad.model
 
 import com.codebrig.jnomad.JNomad
+import com.codebrig.jnomad.task.explain.DatabaseDataType
 import com.codebrig.jnomad.task.explain.QueryIndexReport
+import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresDatabaseDataType
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresQueryReport
+import com.codebrig.jnomad.task.parse.QueryEntityAliasMap
 import com.codebrig.jnomad.task.parse.QueryParser
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import org.apache.commons.math3.util.Precision
@@ -25,17 +28,18 @@ public class FileFullReport {
 
         QueryParser queryParser = new QueryParser(jNomad)
         queryParser.run()
-        queryIndexReport = new PostgresQueryReport(jNomad, queryParser)
-        SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport()
+        queryIndexReport = new PostgresQueryReport(jNomad, new PostgresDatabaseDataType(), queryParser.aliasMap)
+        SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport(jNomad.scannedFileList)
         reportQueriesTask(jNomad, report)
     }
 
-    public FileFullReport(File file, JNomad jNomad, QueryParser queryParser) {
+    public FileFullReport(File file, JNomad jNomad, PostgresDatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap, List<SourceCodeExtract> scannedFileList) {
         this.file = file
         queryScoreList = new ArrayList<>()
         recommendedIndexList = new ArrayList<>()
-        queryIndexReport = new PostgresQueryReport(jNomad, queryParser)
-        SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport()
+        queryIndexReport = new PostgresQueryReport(jNomad, databaseDataType, aliasMap)
+        queryIndexReport.resolveColumnDataTypes(jNomad.scannedFileList)
+        SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport(scannedFileList)
         reportQueriesTask(jNomad, report)
     }
 

@@ -3,7 +3,7 @@ package com.codebrig.jnomad.task.explain.adapter.postgres
 import com.codebrig.jnomad.JNomad
 import com.codebrig.jnomad.model.SourceCodeExtract
 import com.codebrig.jnomad.model.SourceCodeIndexReport
-import com.codebrig.jnomad.task.parse.QueryParser
+import com.codebrig.jnomad.task.parse.QueryEntityAliasMap
 import com.codebrig.jnomad.task.explain.DatabaseDataType
 import com.codebrig.jnomad.task.explain.QueryIndexReport
 import com.codebrig.jnomad.task.explain.transform.hql.*
@@ -26,8 +26,8 @@ import java.util.regex.Pattern
  */
 class PostgresQueryReport extends QueryIndexReport {
 
-    private QueryParser queryParser
-    private DatabaseDataType databaseDataType = new PostgresDatabaseDataType()
+    private QueryEntityAliasMap aliasMap
+    private DatabaseDataType databaseDataType
 
     private Map columnJoinMap = new HashMap<>()
     private List<String> allQueryList = new ArrayList<>()
@@ -41,9 +41,10 @@ class PostgresQueryReport extends QueryIndexReport {
     private Map<String, PostgresExplain> postgresExplainMap = new HashMap<>()
     private Map<String, String> failedQueryReasonMap = new HashMap<>()
 
-    PostgresQueryReport(JNomad jNomad, QueryParser queryParser) {
+    PostgresQueryReport(JNomad jNomad, DatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap) {
         super(jNomad)
-        this.queryParser = queryParser
+        this.databaseDataType = Objects.requireNonNull(databaseDataType)
+        this.aliasMap = Objects.requireNonNull(aliasMap)
 
         if (jNomad.dbDatabase.isEmpty() || jNomad.dbHost.isEmpty()
                 || jNomad.dbUsername.isEmpty() || jNomad.dbPassword.isEmpty()) {
@@ -52,7 +53,7 @@ class PostgresQueryReport extends QueryIndexReport {
     }
 
     @Override
-    SourceCodeIndexReport createSourceCodeIndexReport() {
+    SourceCodeIndexReport createSourceCodeIndexReport(List<SourceCodeExtract> scannedFileList) {
         List<Connection> connectionList = new ArrayList<>()
         try {
             Class.forName("org.postgresql.Driver")
@@ -72,77 +73,11 @@ class PostgresQueryReport extends QueryIndexReport {
         }
 
         try {
-            def map = new HashMap<String, SourceCodeExtract>()
-            for (SourceCodeExtract visitor : jNomad.scannedFileList) {
-                //column joins
-                def queryColumnJoin = visitor.queryColumnJoinExtractor
-                if (!queryColumnJoin.columnJoinMap.isEmpty()) {
-                    map.put(queryColumnJoin.qualifiedClassName, visitor)
-                    queryColumnJoin.columnJoinMap.each {
-                        def qualifiedJoinTableName = queryParser.getQualifiedTableName(it.key)
-                        def fullTableColumnName = queryParser.getQualifiedTableName(queryColumnJoin.className) + "." + qualifiedJoinTableName
-                        columnJoinMap.put(fullTableColumnName, it.value)
-                    }
-                }
-
-                //get data types
-                def dataTypeExtractor = visitor.queryColumnDataTypeExtractor
-                if (!dataTypeExtractor.columnDataTypeMap.isEmpty()) {
-                    map.put(dataTypeExtractor.qualifiedClassName, visitor)
-                    dataTypeExtractor.getColumnDataTypeMap().each {
-                        def qualifiedColumnName = queryParser.getQualifiedColumnName(dataTypeExtractor.className, it.key)
-                        def fullTableColumnName = queryParser.getQualifiedTableName(dataTypeExtractor.className) + "." + qualifiedColumnName
-                        databaseDataType.addDataType(fullTableColumnName, it.value)
-                    }
-                }
-            }
-
-            //extends thing
-            for (SourceCodeExtract visitor : jNomad.scannedFileList) {
-                //column aliases
-                def queryColumnDataType = visitor.queryColumnDataTypeExtractor
-                if (!queryColumnDataType.columnDataTypeMap.isEmpty()) {
-                    def classExtendsPath = queryColumnDataType.extendsClassPath
-                    if (!classExtendsPath.isEmpty()) {
-                        classExtendsPath.each {
-                            ClassOrInterfaceDeclaration declaration = CodeLocator.locateClassOrInterfaceDeclaration(jNomad.typeSolver, it)
-                            if (declaration != null) {
-                                CompilationUnit unit = CodeLocator.demandCompilationUnit(declaration)
-                                def qualifiedName = ""
-                                if (unit.package.isPresent()) {
-                                    qualifiedName = unit.package.get().name.qualifiedName + "." + declaration.name
-                                }
-
-                                def value = map.get(qualifiedName)
-                                if (value != null) {
-                                    value.queryColumnDataTypeExtractor.columnDataTypeMap.each {
-                                        def qualifiedColumnName = queryParser.getQualifiedColumnName(queryColumnDataType.className, it.key)
-                                        def fullTableColumnName = queryParser.getQualifiedTableName(queryColumnDataType.className) + "." + qualifiedColumnName
-                                        databaseDataType.addDataType(fullTableColumnName, it.value)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-            }
-
-            //translate hibernate data types to join column data type
-            databaseDataType.tableColumnDataTypeMap.each {
-                if (!databaseDataType.isKnownDataType(it.value)) {
-                    def str = queryParser.getQualifiedTableName(it.value) + "." + it.key.split(Pattern.quote("."))[1]
-                    def value = databaseDataType.tableColumnDataTypeMap.get(str)
-                    if (value != null) {
-                        it.value = value
-                    }
-                }
-            }
-
-            for (SourceCodeExtract extract : jNomad.scannedFileList) {
+            resolveColumnDataTypes(scannedFileList)
+            for (SourceCodeExtract extract : scannedFileList) {
                 for (Statement statement : extract.parsedQueryList) {
                     allQueryList.add(statement.toString())
-                    def originalQuery = extract.getStatementOriginalQuery(statement)
+                    def originalQuery = Objects.requireNonNull(extract.getStatementOriginalQuery(statement))
                     sourceCodeExtractMap.put(originalQuery, extract)
 
                     def query
@@ -263,7 +198,78 @@ class PostgresQueryReport extends QueryIndexReport {
         return indexReport
     }
 
+    public void resolveColumnDataTypes(List<SourceCodeExtract> scannedFileList) {
+        def map = new HashMap<String, SourceCodeExtract>()
+        for (SourceCodeExtract visitor : scannedFileList) {
+            //column joins
+            def queryColumnJoin = visitor.queryColumnJoinExtractor
+            if (!queryColumnJoin.columnJoinMap.isEmpty()) {
+                map.put(queryColumnJoin.qualifiedClassName, visitor)
+                queryColumnJoin.columnJoinMap.each {
+                    def qualifiedJoinTableName = aliasMap.getQualifiedTableName(it.key)
+                    def fullTableColumnName = aliasMap.getQualifiedTableName(queryColumnJoin.className) + "." + qualifiedJoinTableName
+                    columnJoinMap.put(fullTableColumnName, it.value)
+                }
+            }
+
+            //get data types
+            def dataTypeExtractor = visitor.queryColumnDataTypeExtractor
+            if (!dataTypeExtractor.columnDataTypeMap.isEmpty()) {
+                map.put(dataTypeExtractor.qualifiedClassName, visitor)
+                dataTypeExtractor.getColumnDataTypeMap().each {
+                    def qualifiedColumnName = aliasMap.getQualifiedColumnName(dataTypeExtractor.className, it.key)
+                    def fullTableColumnName = aliasMap.getQualifiedTableName(dataTypeExtractor.className) + "." + qualifiedColumnName
+                    databaseDataType.addDataType(fullTableColumnName, it.value)
+                }
+            }
+        }
+
+        //extends thing
+        for (SourceCodeExtract visitor : scannedFileList) {
+            //column aliases
+            def queryColumnDataType = visitor.queryColumnDataTypeExtractor
+            if (!queryColumnDataType.columnDataTypeMap.isEmpty()) {
+                def classExtendsPath = queryColumnDataType.extendsClassPath
+                if (!classExtendsPath.isEmpty()) {
+                    classExtendsPath.each {
+                        ClassOrInterfaceDeclaration declaration = CodeLocator.locateClassOrInterfaceDeclaration(jNomad.typeSolver, it)
+                        if (declaration != null) {
+                            CompilationUnit unit = CodeLocator.demandCompilationUnit(declaration)
+                            def qualifiedName = ""
+                            if (unit.package.isPresent()) {
+                                qualifiedName = unit.package.get().name.qualifiedName + "." + declaration.name
+                            }
+
+                            def value = map.get(qualifiedName)
+                            if (value != null) {
+                                value.queryColumnDataTypeExtractor.columnDataTypeMap.each {
+                                    def qualifiedColumnName = aliasMap.getQualifiedColumnName(queryColumnDataType.className, it.key)
+                                    def fullTableColumnName = aliasMap.getQualifiedTableName(queryColumnDataType.className) + "." + qualifiedColumnName
+                                    databaseDataType.addDataType(fullTableColumnName, it.value)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+
+        //translate hibernate data types to join column data type
+        databaseDataType.tableColumnDataTypeMap.each {
+            if (!databaseDataType.isKnownDataType(it.value)) {
+                def str = aliasMap.getQualifiedTableName(it.value) + "." + it.key.split(Pattern.quote("."))[1]
+                def value = databaseDataType.tableColumnDataTypeMap.get(str)
+                if (value != null) {
+                    it.value = value
+                }
+            }
+        }
+    }
+
     private void explainQuery(Connection connection, String query, String originalQuery, SourceCodeExtract extract, Statement statement) {
+        println "Explaining query: " + query
+
         connection.autoCommit = false
         def dbStatement = connection.prepareStatement("explain (analyze ${jNomad.queryExplainAnalyze}, format json) " + query)
         try {
@@ -302,7 +308,7 @@ class PostgresQueryReport extends QueryIndexReport {
 
     @Override
     String getSQLTableName(String tableName) {
-        def name = queryParser.getQualifiedTableName(tableName)
+        def name = aliasMap.getQualifiedTableName(tableName)
         if (name != null) {
             return name
         } else {
@@ -312,12 +318,12 @@ class PostgresQueryReport extends QueryIndexReport {
 
     @Override
     String getSQLColumnName(String tableName, String columnName) {
-        return queryParser.getQualifiedColumnName(tableName, columnName)
+        return aliasMap.getQualifiedColumnName(tableName, columnName)
     }
 
     @Override
     String getSQLTableColumnName(String tableName, String columnName) {
-        return getSQLTableName(tableName) + "." + queryParser.getQualifiedColumnName(tableName, columnName)
+        return getSQLTableName(tableName) + "." + aliasMap.getQualifiedColumnName(tableName, columnName)
     }
 
     @Override

@@ -247,7 +247,7 @@ class HQLTableJoinTransformer extends HierarchicalHQLVisitor {
                                 rightTableName = joinTableName
                                 rightTableExtract = tableExtract
                             } else {
-                                throw new HQLTransformException("Failed HQL join translation on query: "
+                                throw new Exception("Failed HQL join translation on query: "
                                         + ObjectUtils.firstNonNull(plainSelect, plainUpdate, plainDelete))
                             }
                         } else if (leftTableExtract != null && leftTableExtract.queryColumnJoinExtractor.embeddedJoinTableTypeMap.containsKey(rightTableName)) {
@@ -255,15 +255,15 @@ class HQLTableJoinTransformer extends HierarchicalHQLVisitor {
                             finalJoinColumn = strParts[++i]
                             continue
                         } else {
-                            throw new HQLTransformException("Failed HQL join translation on query: "
+                            throw new Exception("Failed HQL join translation on query: "
                                     + ObjectUtils.firstNonNull(plainSelect, plainUpdate, plainDelete))
                         }
                     } else {
-                        throw new HQLTransformException("Failed HQL join translation on query: "
+                        throw new Exception("Failed HQL join translation on query: "
                                 + ObjectUtils.firstNonNull(plainSelect, plainUpdate, plainDelete))
                     }
                 } else if (rightTableExtract == null) {
-                    throw new HQLTransformException("Failed HQL join translation on query: "
+                    throw new Exception("Failed HQL join translation on query: "
                             + ObjectUtils.firstNonNull(plainSelect, plainUpdate, plainDelete))
                 }
             }
@@ -343,6 +343,7 @@ class HQLTableJoinTransformer extends HierarchicalHQLVisitor {
                 if (linkColumnName != null) {
                     break
                 }
+                excludeList.add(joinSourceExtract)
             }
         }
 

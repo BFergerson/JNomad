@@ -12,7 +12,7 @@ abstract class QueryIndexReport {
     protected final JNomad jNomad
 
     QueryIndexReport(JNomad jNomad) {
-        this.jNomad = jNomad
+        this.jNomad = Objects.requireNonNull(jNomad)
     }
 
     JNomad getjNomad() {
@@ -21,7 +21,7 @@ abstract class QueryIndexReport {
 
     abstract DatabaseDataType getDatabaseDataType()
 
-    abstract SourceCodeIndexReport createSourceCodeIndexReport()
+    abstract SourceCodeIndexReport createSourceCodeIndexReport(List<SourceCodeExtract> scannedFileList)
 
     abstract String getSQLTableName(String tableName)
 

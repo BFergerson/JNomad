@@ -21,16 +21,16 @@ class SourceCodeExtract {
         queryFoundList = new ArrayList<>()
         parsedQueryList = new ArrayList<>()
         queryExplainResultList =  new ArrayList<>()
-        originalQueryMap = new HashMap<>()
+        originalQueryMap = new IdentityHashMap<>()
     }
 
     void addQueryFound(String queryFound) {
-        queryFoundList.add(queryFound)
+        queryFoundList.add(Objects.requireNonNull(queryFound))
     }
 
     void addParsedQuery(Statement statement, String originalQuery) {
-        parsedQueryList.add(statement)
-        originalQueryMap.put(statement, originalQuery)
+        parsedQueryList.add(Objects.requireNonNull(statement))
+        originalQueryMap.put(statement, Objects.requireNonNull(originalQuery))
     }
 
     List<Statement> getParsedQueryList() {
@@ -38,11 +38,11 @@ class SourceCodeExtract {
     }
 
     public String getStatementOriginalQuery(Statement statement) {
-        return originalQueryMap.get(statement)
+        return originalQueryMap.get(Objects.requireNonNull(statement))
     }
 
     void addQueryExplainResult(ExplainResult explainResult) {
-        queryExplainResultList.add(explainResult)
+        queryExplainResultList.add(Objects.requireNonNull(explainResult))
     }
 
     QueryLiteralExtractor getQueryLiteralExtractor() {

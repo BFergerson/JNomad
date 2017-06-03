@@ -200,7 +200,7 @@ class QueryLiteralExtractor extends NomadExtractor {
         return possibleDynamicQueryList
     }
 
-    def getQueryCallRange(String query) {
+    public Range getQueryCallRange(String query) {
         return toRange(queryCallRangeMap.get(Objects.requireNonNull(query).toLowerCase()))
     }
 
