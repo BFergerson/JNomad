@@ -1,4 +1,4 @@
-Java Source Code Query Scanner / Index Recommender
+Java Source Code Query Scanner / Index Recommendations
 ==================================
 [![Build Status](https://travis-ci.org/BFergerson/JNomad.svg?branch=master)](https://travis-ci.org/BFergerson/JNomad)
 

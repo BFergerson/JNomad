@@ -59,6 +59,9 @@ class QueryParser {
     }
 
     def run(List<SourceCodeExtract> scannedFileList) {
+        staticExprMap.clear();
+        dynamicExprMap.clear();
+
         def map = new HashMap<String, SourceCodeExtract>()
         for (SourceCodeExtract visitor : scannedFileList) {
             //query literals
@@ -69,6 +72,7 @@ class QueryParser {
                 if (parseResult == null) {
                     staticExprMap.put(queryString, parseResult = new ParseResult(new ArrayList<>(), visitor))
                 }
+                parseResult.extract = visitor
                 parseResult.queryList.add(queryString)
                 visitor.addQueryFound(queryString)
             }
@@ -77,6 +81,7 @@ class QueryParser {
                 if (parseResult == null) {
                     dynamicExprMap.put(queryString, parseResult = new ParseResult(new ArrayList<>(), visitor))
                 }
+                parseResult.extract = visitor
                 parseResult.queryList.add(queryString)
                 visitor.addQueryFound(queryString)
             }
