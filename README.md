@@ -50,21 +50,14 @@ java -jar JNomadCLI.jar -scan_directory C:\MyWorkspace\MyJavaProject -db_host lo
 ### Output
 ```
 ****************************************************************************************************
-JNomad {1.2/Alpha}: Index Recommendations
+JNomad {1.5/Alpha}: Index Recommendations
 ****************************************************************************************************
 
-Index Priority: 1202.0
-Index Condition: create_date
-Index Table: my_date_table
-Index: CREATE INDEX ON my_date_table (create_date);
+Index: CREATE INDEX idx_column_c ON table_b (column_c);
+	Index Priority: 1202.0
+	Index Table: table_b
+	Index Condition: column_c
+	Index Affects: 
+		File: src\test\resources\TestSingleFile.java - Location: (line 19,col 23)-(line 19,col 88)
 
-Index Priority: 66.0
-Index Condition: item_id
-Index Table: my_item_table
-Index: CREATE INDEX ON my_item_table (item_id);
-
-Index Priority: 64.0
-Index Condition: account_id
-Index Table: my_account_table
-Index: CREATE INDEX ON my_account_table (account_id);
 ```
