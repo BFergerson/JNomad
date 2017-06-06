@@ -1,14 +1,14 @@
 package com.codebrig.jnomad.task.explain.adapter
 
 enum DatabaseAdapterType {
-    POSTGRES,
+    POSTGRESQL,
     MYSQL
 
     static DatabaseAdapterType fromString(String databaseTypeStr) {
         databaseTypeStr = Objects.requireNonNull(databaseTypeStr).toUpperCase()
         switch (databaseTypeStr) {
-            case "POSTGRES":
-                return POSTGRES
+            case "POSTGRESQL":
+                return POSTGRESQL
             case "MYSQL":
                 return MYSQL
             default:
