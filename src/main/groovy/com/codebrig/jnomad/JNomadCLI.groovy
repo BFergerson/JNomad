@@ -29,8 +29,8 @@ import java.util.concurrent.TimeUnit
  */
 class JNomadCLI {
 
-    public static final String JNOMAD_VERSION = "1.4/Alpha"
-    public static final String JNOMAD_BUILD_DATE = "2017.06.01"
+    public static final String JNOMAD_VERSION = "1.5/Alpha"
+    public static final String JNOMAD_BUILD_DATE = "2017.06.06"
 
     @Parameter(names = ["-f", "-log_file"], description = "Log console output to specified file")
     public String logFile
