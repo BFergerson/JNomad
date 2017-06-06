@@ -33,7 +33,7 @@ class FileFullReport {
         queryParser.run()
 
         switch (adapterType) {
-            case DatabaseAdapterType.POSTGRES:
+            case DatabaseAdapterType.POSTGRESQL:
                 queryIndexReport = new PostgresQueryReport(jNomad, new PostgresDatabaseDataType(), queryParser.aliasMap)
                 break
             case DatabaseAdapterType.MYSQL:

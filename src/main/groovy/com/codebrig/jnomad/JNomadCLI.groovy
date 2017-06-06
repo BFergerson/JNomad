@@ -186,11 +186,11 @@ class JNomadCLI {
 
         QueryIndexReport reportAdapter
         switch (adapterType) {
+            case DatabaseAdapterType.POSTGRESQL:
+                reportAdapter = new PostgresQueryReport(jNomad, new PostgresDatabaseDataType(), aliasMap)
+                break
             case DatabaseAdapterType.MYSQL:
                 reportAdapter = new MysqlQueryReport(jNomad, new MysqlDatabaseDataType(), aliasMap)
-                break
-            case DatabaseAdapterType.POSTGRES:
-                reportAdapter = new PostgresQueryReport(jNomad, new PostgresDatabaseDataType(), aliasMap)
                 break
         }
 
