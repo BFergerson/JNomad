@@ -5,6 +5,10 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import com.codebrig.jnomad.model.SourceCodeExtract
 import com.codebrig.jnomad.model.SourceCodeIndexReport
+import com.codebrig.jnomad.task.explain.QueryIndexReport
+import com.codebrig.jnomad.task.explain.adapter.DatabaseAdapterType
+import com.codebrig.jnomad.task.explain.adapter.mysql.MysqlQueryReport
+import com.codebrig.jnomad.task.explain.adapter.postgres.MysqlDatabaseDataType
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresDatabaseDataType
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
 import com.codebrig.jnomad.task.parse.QueryEntityAliasMap
@@ -66,6 +70,9 @@ class JNomadCLI {
 
     @Parameter(names = "-db_database", description = "Database name")
     public List<String> dbDatabase
+
+    @Parameter(names = "-db_type", description = "Database type (Supported: PostgreSQL, MySQL)")
+    public String databaseType = "PostgreSQL"
 
     @Parameter(names = "-analyze_explain", description = "Execute query explain with analyze (will actually run query)", arity = 1)
     public boolean queryExplainAnalyze = true
@@ -147,7 +154,7 @@ class JNomadCLI {
         JNomad jNomad = setupJNomadTask(main, commander)
         collectQueriesTask(jNomad)
         def queryParser = parseQueriesTask(jNomad)
-        def indexReport = explainQueriesTask(jNomad, queryParser.aliasMap)
+        def indexReport = explainQueriesTask(jNomad, queryParser.aliasMap, DatabaseAdapterType.fromString(main.databaseType))
         reportQueriesTask(jNomad, indexReport)
 
         println "${breaker()}JNomad {${JNOMAD_VERSION}}: All tasks finished!\n\t\t - Total runtime: ${getRuntime(startTime)}${breaker()}"
@@ -173,11 +180,20 @@ class JNomadCLI {
         return queryParser
     }
 
-    private static SourceCodeIndexReport explainQueriesTask(JNomad jNomad, QueryEntityAliasMap aliasMap) {
+    private static SourceCodeIndexReport explainQueriesTask(JNomad jNomad, QueryEntityAliasMap aliasMap, DatabaseAdapterType adapterType) {
         println "${breaker()}JNomad {${JNOMAD_VERSION}}: Running PostgreSQL explains...${breaker()}"
         long startTime = System.currentTimeMillis()
 
-        def reportAdapter = new PostgresQueryReport(jNomad, new PostgresDatabaseDataType(), aliasMap)
+        QueryIndexReport reportAdapter
+        switch (adapterType) {
+            case DatabaseAdapterType.MYSQL:
+                reportAdapter = new MysqlQueryReport(jNomad, new MysqlDatabaseDataType(), aliasMap)
+                break
+            case DatabaseAdapterType.POSTGRES:
+                reportAdapter = new PostgresQueryReport(jNomad, new PostgresDatabaseDataType(), aliasMap)
+                break
+        }
+
         def report = reportAdapter.createSourceCodeIndexReport(jNomad.scannedFileList)
 
         int allQueryCount = reportAdapter.allQueryList.size()
@@ -387,8 +403,8 @@ class JNomadCLI {
                 def locationSet = new HashSet<>()
                 boolean outputHeader = false
                 it.value.hitList.each {
-                    def literalExtractor = it.postgresExplain.sourceCodeExtract.queryLiteralExtractor
-                    def range = literalExtractor.getQueryCallRange(it.postgresExplain.originalQuery)
+                    def literalExtractor = it.explainResult.sourceCodeExtract.queryLiteralExtractor
+                    def range = literalExtractor.getQueryCallRange(it.explainResult.originalQuery)
 
                     if (!locationSet.contains(range)) {
                         if (!outputHeader) {

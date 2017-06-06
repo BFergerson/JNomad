@@ -1,5 +1,6 @@
 package com.codebrig.jnomad.task.explain.adapter.postgres
 
+import com.codebrig.jnomad.task.explain.ExplainPlan
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
@@ -7,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
  * @author Brandon Fergerson <brandon.fergerson@codebrig.com>
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-class ExplainPlan {
+class PostgresExplainPlan extends ExplainPlan  {
 
     @JsonProperty("Node Type")
     private String nodeType
@@ -94,7 +95,7 @@ class ExplainPlan {
     @JsonProperty("Lossy Heap Blocks")
     private Integer lossyHeapBlocks
     @JsonProperty("Plans")
-    private List<ExplainPlan> plans
+    private List<PostgresExplainPlan> plans
 
     String getNodeType() {
         return nodeType
@@ -264,8 +265,22 @@ class ExplainPlan {
         return lossyHeapBlocks
     }
 
-    List<ExplainPlan> getPlans() {
+    List<PostgresExplainPlan> getPlans() {
         return plans
+    }
+
+    @Override
+    String getTableName() {
+        return relationName
+    }
+
+    @Override
+    String getConditionClause() {
+        def conditionStatementString = filter
+        if (conditionStatementString == null) {
+            conditionStatementString = recheckCond
+        }
+        return conditionStatementString
     }
 
 }

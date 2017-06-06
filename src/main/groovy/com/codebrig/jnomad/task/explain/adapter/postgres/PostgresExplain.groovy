@@ -1,11 +1,9 @@
 package com.codebrig.jnomad.task.explain.adapter.postgres
 
-import com.codebrig.jnomad.model.SourceCodeExtract
+import com.codebrig.jnomad.task.explain.CalculatedExplainPlan
 import com.codebrig.jnomad.task.explain.ExplainResult
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
-import net.sf.jsqlparser.statement.Statement
 
 /**
  * @author Brandon Fergerson <brandon.fergerson@codebrig.com>
@@ -13,7 +11,7 @@ import net.sf.jsqlparser.statement.Statement
 class PostgresExplain extends ExplainResult {
 
     @JsonProperty("Plan")
-    private ExplainPlan plan
+    private PostgresExplainPlan plan
     @JsonProperty("Planning Time")
     private Double planningTime
     @JsonProperty("Execution Time")
@@ -23,16 +21,7 @@ class PostgresExplain extends ExplainResult {
     @JsonProperty("Triggers")
     private List<PostgresTrigger> triggers
 
-    @JsonIgnore
-    private transient String originalQuery
-    @JsonIgnore
-    private transient String finalQuery
-    @JsonIgnore
-    private transient Statement explainedStatement
-    @JsonIgnore
-    private transient SourceCodeExtract sourceCodeExtract
-
-    ExplainPlan getPlan() {
+    PostgresExplainPlan getPlan() {
         return plan
     }
 
@@ -52,47 +41,16 @@ class PostgresExplain extends ExplainResult {
         return triggers
     }
 
-    void setOriginalQuery(String originalQuery) {
-        this.originalQuery = Objects.requireNonNull(originalQuery)
-    }
-
-    String getOriginalQuery() {
-        return originalQuery
-    }
-
-    void setFinalQuery(String finalQuery) {
-        this.finalQuery = Objects.requireNonNull(finalQuery)
-    }
-
-    String getFinalQuery() {
-        return finalQuery
-    }
-
-    void setExplainedStatement(Statement explainedStatement) {
-        this.explainedStatement = Objects.requireNonNull(explainedStatement)
-    }
-
-    Statement getExplainedStatement() {
-        return explainedStatement
-    }
-
-    void setSourceCodeExtract(SourceCodeExtract sourceCodeExtract) {
-        this.sourceCodeExtract = Objects.requireNonNull(sourceCodeExtract)
-    }
-
-    SourceCodeExtract getSourceCodeExtract() {
-        return sourceCodeExtract
-    }
-
     CalculatedExplainPlan calculateCostliestNode() {
         return calculateCostliestNode(null)
     }
 
+    @Override
     CalculatedExplainPlan calculateCostliestNode(List<String> excludedNodeTypeList) {
-        List<ExplainPlan> flatPlanList = flattenPostgresExplain(plan, new ArrayList<>())
+        List<PostgresExplainPlan> flatPlanList = flattenPostgresExplain(plan, new ArrayList<>())
 
         Double costliestNodeValue = null
-        ExplainPlan costliestPlan = null
+        PostgresExplainPlan costliestPlan = null
         flatPlanList.each {
             if (it.totalCost != null) {
                 def excludedNode = false
@@ -127,11 +85,12 @@ class PostgresExplain extends ExplainResult {
         return calculateSlowestNode(null)
     }
 
+    @Override
     CalculatedExplainPlan calculateSlowestNode(List<String> excludedNodeTypeList) {
-        List<ExplainPlan> flatPlanList = flattenPostgresExplain(plan, new ArrayList<>())
+        List<PostgresExplainPlan> flatPlanList = flattenPostgresExplain(plan, new ArrayList<>())
 
         Double slowestNodeValue = null
-        ExplainPlan slowestPlan = null
+        PostgresExplainPlan slowestPlan = null
         flatPlanList.each {
             if (it.totalCost != null) {
                 def excludedNode = false
@@ -162,7 +121,7 @@ class PostgresExplain extends ExplainResult {
         return new CalculatedExplainPlan(this, slowestNodeValue, slowestPlan, explainedStatement)
     }
 
-    private static List<ExplainPlan> flattenPostgresExplain(ExplainPlan plan, List<ExplainPlan> planList) {
+    private static List<PostgresExplainPlan> flattenPostgresExplain(PostgresExplainPlan plan, List<PostgresExplainPlan> planList) {
         planList.add(plan)
         if (plan.plans != null) {
             plan.plans.each {

@@ -9,7 +9,14 @@ import com.codebrig.jnomad.model.SourceCodeIndexReport
  */
 abstract class QueryIndexReport {
     
-    protected final JNomad jNomad
+    private final JNomad jNomad
+    private final List<String> allQueryList = new ArrayList<>()
+    private final List<String> successfullyExplainedQueryList = new ArrayList<>()
+    private final List<String> emptyWhereClauseList = new ArrayList<>()
+    private final List<String> missingRequiredTableList = new ArrayList<>()
+    private final List<String> missingRequiredColumnList = new ArrayList<>()
+    private final List<String> permissionDeniedTableList = new ArrayList<>()
+    private final List<String> failedQueryParseList = new ArrayList<>()
 
     QueryIndexReport(JNomad jNomad) {
         this.jNomad = Objects.requireNonNull(jNomad)
@@ -17,6 +24,34 @@ abstract class QueryIndexReport {
 
     JNomad getjNomad() {
         return jNomad
+    }
+
+    List<String> getAllQueryList() {
+        return allQueryList
+    }
+
+    List<String> getSuccessfullyExplainedQueryList() {
+        return successfullyExplainedQueryList;
+    }
+
+    List<String> getEmptyWhereClauseList() {
+        return emptyWhereClauseList
+    }
+
+    List<String> getMissingRequiredTableList() {
+        return missingRequiredTableList
+    }
+
+    List<String> getMissingRequiredColumnList() {
+        return missingRequiredColumnList
+    }
+
+    List<String> getPermissionDeniedTableList() {
+        return permissionDeniedTableList
+    }
+
+    List<String> getFailedQueryParseList() {
+        return failedQueryParseList
     }
 
     abstract DatabaseDataType getDatabaseDataType()
@@ -31,11 +66,7 @@ abstract class QueryIndexReport {
 
     abstract String getSQLJoinColumnName(String tableName, String joinTableName)
 
-    abstract List<String> getFailedQueryParseList()
-
     abstract String getFailedQueryReason(String originalQuery)
-
-    abstract List<String> getSuccessfullyExplainedQueryList()
 
     abstract Map<String, SourceCodeExtract> getSourceCodeExtractMap()
 

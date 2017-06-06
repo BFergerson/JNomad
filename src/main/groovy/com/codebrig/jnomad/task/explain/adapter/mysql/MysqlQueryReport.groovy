@@ -1,12 +1,16 @@
-package com.codebrig.jnomad.task.explain.adapter.postgres
+package com.codebrig.jnomad.task.explain.adapter.mysql
 
 import com.codebrig.jnomad.JNomad
 import com.codebrig.jnomad.model.SourceCodeExtract
 import com.codebrig.jnomad.model.SourceCodeIndexReport
-import com.codebrig.jnomad.task.parse.QueryEntityAliasMap
-import com.codebrig.jnomad.task.explain.DatabaseDataType
 import com.codebrig.jnomad.task.explain.QueryIndexReport
-import com.codebrig.jnomad.task.explain.transform.hql.*
+import com.codebrig.jnomad.task.explain.adapter.postgres.MysqlDatabaseDataType
+import com.codebrig.jnomad.task.explain.transform.hql.HQLColumnNameTransformer
+import com.codebrig.jnomad.task.explain.transform.hql.HQLColumnValueTransformer
+import com.codebrig.jnomad.task.explain.transform.hql.HQLTableJoinTransformer
+import com.codebrig.jnomad.task.explain.transform.hql.HQLTableNameTransformer
+import com.codebrig.jnomad.task.explain.transform.hql.HQLTransformException
+import com.codebrig.jnomad.task.parse.QueryEntityAliasMap
 import com.codebrig.jnomad.utils.CodeLocator
 import com.codebrig.jnomad.utils.QueryCleaner
 import com.fasterxml.jackson.core.type.TypeReference
@@ -24,24 +28,25 @@ import java.util.regex.Pattern
 /**
  * @author Brandon Fergerson <brandon.fergerson@codebrig.com>
  */
-class PostgresQueryReport extends QueryIndexReport {
+class MysqlQueryReport extends QueryIndexReport  {
 
     private QueryEntityAliasMap aliasMap
-    private PostgresDatabaseDataType databaseDataType
+    private MysqlDatabaseDataType databaseDataType
 
     private Map columnJoinMap = new HashMap<>()
+
     private Map<String, SourceCodeExtract> sourceCodeExtractMap = new HashMap<>()
-    private Map<String, PostgresExplain> postgresExplainMap = new HashMap<>()
+    private Map<String, MysqlExplain> mysqlExplainMap = new HashMap<>()
     private Map<String, String> failedQueryReasonMap = new HashMap<>()
 
-    PostgresQueryReport(JNomad jNomad, PostgresDatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap) {
+    MysqlQueryReport(JNomad jNomad, MysqlDatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap) {
         super(jNomad)
         this.databaseDataType = Objects.requireNonNull(databaseDataType)
         this.aliasMap = Objects.requireNonNull(aliasMap)
 
         if (jNomad.dbDatabase.isEmpty() || jNomad.dbHost.isEmpty()
                 || jNomad.dbUsername.isEmpty() || jNomad.dbPassword.isEmpty()) {
-            throw new RuntimeException("Postgres database access was not provided!")
+            throw new RuntimeException("Mysql database access was not provided!")
         }
     }
 
@@ -49,13 +54,12 @@ class PostgresQueryReport extends QueryIndexReport {
     SourceCodeIndexReport createSourceCodeIndexReport(List<SourceCodeExtract> scannedFileList) {
         List<Connection> connectionList = new ArrayList<>()
         try {
-            Class.forName("org.postgresql.Driver")
             for (int i = 0; i < jNomad.dbDatabase.size(); i++) {
                 def host = jNomad.dbHost.get(i)
                 if (!host.contains(":")) {
-                    host += ":5432"
+                    host += ":3306"
                 }
-                def connUrl = "jdbc:postgresql://" + host + "/" + jNomad.dbDatabase.get(i)
+                def connUrl = "jdbc:mysql://" + host + "/" + jNomad.dbDatabase.get(i)
                 def connection = DriverManager.getConnection(connUrl, jNomad.dbUsername.get(i), jNomad.dbPassword.get(i))
                 connectionList.add(connection)
             }
@@ -160,34 +164,46 @@ class PostgresQueryReport extends QueryIndexReport {
         }
 
         def indexReport = new SourceCodeIndexReport()
-        postgresExplainMap.each {
-            if (it.value.plan.totalCost != null) {
-                indexReport.addTotalCost(it.value.plan.totalCost, it.value)
-            }
-            if (it.value.plan.startupCost != null) {
-                indexReport.addStartupCost(it.value.plan.startupCost, it.value)
-            }
-            if (it.value.totalRuntime != null) {
-                indexReport.addTotalRuntime(it.value.totalRuntime, it.value)
-            }
-            if (it.value.executionTime != null) {
-                indexReport.addExecutionTime(it.value.executionTime, it.value)
-            }
-
-            //seq scan
-            if (it.value.plan.actualTotalTime != null && it.value.plan.nodeType == "Seq Scan") {
-                indexReport.addSequenceScan(it.value.plan.actualTotalTime, it.value)
-            }
-            if (it.value.plan.plans != null) {
-                it.value.plan.plans.each { subPlan ->
-                    if (it.value.plan.actualTotalTime != null && subPlan.nodeType == "Seq Scan") {
-                        indexReport.addSequenceScan(subPlan.actualTotalTime, it.value)
-                    }
-                }
+        mysqlExplainMap.each {
+            if (it.value.queryBlock.rTotalTimeMs != null) {
+                indexReport.addExecutionTime(it.value.queryBlock.rTotalTimeMs, it.value)
             }
         }
 
         return indexReport
+    }
+
+    private void explainQuery(Connection connection, String query, String originalQuery, SourceCodeExtract extract, Statement statement) {
+        println "Explaining query: " + query
+
+        connection.autoCommit = false
+        def dbStatement = connection.prepareStatement("analyze format=json " + query)
+        try {
+            def result = dbStatement.executeQuery()
+            while (result.next()) {
+                ResultSetMetaData metaData = result.getMetaData()
+                int columnCount = metaData.getColumnCount()
+
+                for (int i = 1; i <= columnCount; i++) {
+                    String name = metaData.getColumnName(i)
+                    def str = result.getString(name)
+
+                    ObjectMapper mapper = new ObjectMapper()
+                    MysqlExplain queryExplain = mapper.readValue(str, new TypeReference<MysqlExplain>() {})
+
+                    mysqlExplainMap.put(query, queryExplain)
+                    successfullyExplainedQueryList.add(originalQuery)
+                    extract.addQueryExplainResult(queryExplain)
+                    queryExplain.originalQuery = originalQuery
+                    queryExplain.finalQuery = query
+                    queryExplain.explainedStatement = statement
+                    queryExplain.sourceCodeExtract = extract
+                }
+            }
+        } finally {
+            connection.rollback()
+            if (dbStatement != null) dbStatement.close()
+        }
     }
 
     void resolveColumnDataTypes(List<SourceCodeExtract> scannedFileList) {
@@ -259,44 +275,11 @@ class PostgresQueryReport extends QueryIndexReport {
         }
     }
 
-    private void explainQuery(Connection connection, String query, String originalQuery, SourceCodeExtract extract, Statement statement) {
-        println "Explaining query: " + query
-
-        connection.autoCommit = false
-        def dbStatement = connection.prepareStatement("explain (analyze ${jNomad.queryExplainAnalyze}, format json) " + query)
-        try {
-            def result = dbStatement.executeQuery()
-            while (result.next()) {
-                ResultSetMetaData metaData = result.getMetaData()
-                int columnCount = metaData.getColumnCount()
-
-                for (int i = 1; i <= columnCount; i++) {
-                    String name = metaData.getColumnName(i)
-                    def str = result.getString(name)
-
-                    ObjectMapper mapper = new ObjectMapper()
-                    List<PostgresExplain> queryExplain = mapper.readValue(str,
-                            new TypeReference<List<PostgresExplain>>() {})
-
-                    postgresExplainMap.put(query, queryExplain.get(0))
-                    successfullyExplainedQueryList.add(originalQuery)
-                    extract.addQueryExplainResult(queryExplain.get(0))
-                    queryExplain.get(0).originalQuery = originalQuery
-                    queryExplain.get(0).finalQuery = query
-                    queryExplain.get(0).explainedStatement = statement
-                    queryExplain.get(0).sourceCodeExtract = extract
-                }
-            }
-        } finally {
-            connection.rollback()
-            if (dbStatement != null) dbStatement.close()
-        }
-    }
-
     @Override
-    PostgresDatabaseDataType getDatabaseDataType() {
+    MysqlDatabaseDataType getDatabaseDataType() {
         return databaseDataType
     }
+
 
     @Override
     String getSQLTableName(String tableName) {

@@ -1,9 +1,8 @@
 package com.codebrig.jnomad.model
 
 import com.codebrig.jnomad.task.explain.DatabaseDataType
-import com.codebrig.jnomad.task.explain.adapter.postgres.CalculatedExplainPlan
+import com.codebrig.jnomad.task.explain.CalculatedExplainPlan
 import com.codebrig.jnomad.utils.HQLQueryWalker
-import com.codebrig.jnomad.utils.HQLTableAliasWalker
 import net.sf.jsqlparser.expression.BinaryExpression
 import net.sf.jsqlparser.schema.Column
 import net.sf.jsqlparser.statement.Statement
@@ -68,16 +67,17 @@ class IndexRecommendation {
         def treeMap = new TreeMap<Integer, IndexHitMap>()
         indexMap.values().each {
             it.values().each {
-                treeMap.put(it.hitCount * it.priorityMultiplier, it)
+                treeMap.put((int) (it.hitCount * it.priorityMultiplier), it)
             }
         }
         return treeMap
     }
 
     void determineBestIndex(CalculatedExplainPlan plan, DescriptiveStatistics stats) {
-        def conditionStatementString = plan.plan.filter
+        def conditionStatementString = plan.explainPlan.conditionClause
         if (conditionStatementString == null) {
-            conditionStatementString = plan.plan.recheckCond
+            //skip looking for index; mysql = null when index_condition is used instead of attached_condition
+            return
         }
 
         def statementHitCache = statementIndexHitMap.get(plan.statement)
@@ -119,7 +119,7 @@ class IndexRecommendation {
                 BinaryExpression compareOp = (BinaryExpression) plan.parentToNomadValue
                 if (compareOp.leftExpression == plan.nomadValue) {
                     //index field to the right
-                    def tableName = plan.plan.relationName //getTableName(plan.statement, compareOp.leftExpression)
+                    String tableName = Objects.requireNonNull(plan.explainPlan.tableName)
                     removeTableNames(compareOp.rightExpression)
                     def toIndex = compareOp.rightExpression
 
@@ -140,7 +140,7 @@ class IndexRecommendation {
                     }
                 } else {
                     //index field to the left
-                    def tableName = plan.plan.relationName //getTableName(plan.statement, compareOp.leftExpression)
+                    String tableName = Objects.requireNonNull(plan.explainPlan.tableName)
                     removeTableNames(compareOp.leftExpression)
                     def toIndex = compareOp.leftExpression
 
@@ -162,30 +162,6 @@ class IndexRecommendation {
                 }
             }
         }
-    }
-
-    static String getTableName(Statement statement, Object obj) {
-        String tableName = null
-        def walker = new HQLTableAliasWalker()
-        walker.visit(obj)
-        walker.statementParsePath.each {
-            if (it instanceof Column) {
-                if (it.table != null) {
-                    tableName = it.table.name
-                }
-            }
-        }
-
-        if (tableName != null) {
-            def aliasWalker = new HQLTableAliasWalker()
-            aliasWalker.visit(statement)
-
-            def fullTableName = aliasWalker.queryTableAliasMap.get(tableName)
-            if (fullTableName != null) {
-                tableName = fullTableName
-            }
-        }
-        return tableName
     }
 
     static void removeTableNames(Object obj) {

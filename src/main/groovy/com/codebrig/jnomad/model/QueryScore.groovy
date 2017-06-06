@@ -1,6 +1,6 @@
 package com.codebrig.jnomad.model
 
-import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
+import com.codebrig.jnomad.task.explain.ExplainResult
 import com.github.javaparser.Range
 
 /**
@@ -12,11 +12,11 @@ class QueryScore {
     private String originalQuery
     private String explainedQuery
     private SourceCodeExtract sourceCodeExtract
-    private PostgresExplain explain
+    private ExplainResult explain
     private File queryFile
     private Range queryRange
 
-    public QueryScore() {
+    QueryScore() {
     }
 
     double getScore() {
@@ -51,11 +51,11 @@ class QueryScore {
         this.sourceCodeExtract = sourceCodeExtract
     }
 
-    PostgresExplain getExplain() {
+    ExplainResult getExplain() {
         return explain
     }
 
-    void setExplain(PostgresExplain explain) {
+    void setExplain(ExplainResult explain) {
         this.explain = explain
     }
 

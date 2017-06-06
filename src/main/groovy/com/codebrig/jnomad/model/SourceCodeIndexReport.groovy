@@ -1,6 +1,7 @@
 package com.codebrig.jnomad.model
 
-import com.codebrig.jnomad.task.explain.adapter.postgres.CalculatedExplainPlan
+import com.codebrig.jnomad.task.explain.ExplainResult
+import com.codebrig.jnomad.task.explain.CalculatedExplainPlan
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 
@@ -9,11 +10,11 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
  */
 class SourceCodeIndexReport {
 
-    private TreeMap<Double, List<PostgresExplain>> totalCostMap = new TreeMap<>()
-    private TreeMap<Double, List<PostgresExplain>> startupCostMap = new TreeMap<>()
-    private TreeMap<Double, List<PostgresExplain>> totalRuntimeMap = new TreeMap<>()
-    private TreeMap<Double, List<PostgresExplain>> executionTimeMap = new TreeMap<>()
-    private TreeMap<Double, List<PostgresExplain>> sequenceScanMap = new TreeMap<>()
+    private TreeMap<Double, List<ExplainResult>> totalCostMap = new TreeMap<>()
+    private TreeMap<Double, List<ExplainResult>> startupCostMap = new TreeMap<>()
+    private TreeMap<Double, List<ExplainResult>> totalRuntimeMap = new TreeMap<>()
+    private TreeMap<Double, List<ExplainResult>> executionTimeMap = new TreeMap<>()
+    private TreeMap<Double, List<ExplainResult>> sequenceScanMap = new TreeMap<>()
 
     private IndexRecommendation indexRecommendation = new IndexRecommendation()
 
@@ -21,8 +22,8 @@ class SourceCodeIndexReport {
         return indexRecommendation
     }
 
-    void addTotalCost(Double key, PostgresExplain value) {
-        List<PostgresExplain> explainList = totalCostMap.get(key)
+    void addTotalCost(Double key, ExplainResult value) {
+        List<ExplainResult> explainList = totalCostMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
             totalCostMap.put(Objects.requireNonNull(key), explainList)
@@ -30,8 +31,8 @@ class SourceCodeIndexReport {
         explainList.add(Objects.requireNonNull(value))
     }
 
-    void addStartupCost(Double key, PostgresExplain value) {
-        List<PostgresExplain> explainList = startupCostMap.get(key)
+    void addStartupCost(Double key, ExplainResult value) {
+        List<ExplainResult> explainList = startupCostMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
             startupCostMap.put(Objects.requireNonNull(key), explainList)
@@ -39,8 +40,8 @@ class SourceCodeIndexReport {
         explainList.add(Objects.requireNonNull(value))
     }
 
-    void addTotalRuntime(Double key, PostgresExplain value) {
-        List<PostgresExplain> explainList = totalRuntimeMap.get(key)
+    void addTotalRuntime(Double key, ExplainResult value) {
+        List<ExplainResult> explainList = totalRuntimeMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
             totalRuntimeMap.put(Objects.requireNonNull(key), explainList)
@@ -48,8 +49,8 @@ class SourceCodeIndexReport {
         explainList.add(Objects.requireNonNull(value))
     }
 
-    void addExecutionTime(Double key, PostgresExplain value) {
-        List<PostgresExplain> explainList = executionTimeMap.get(key)
+    void addExecutionTime(Double key, ExplainResult value) {
+        List<ExplainResult> explainList = executionTimeMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
             executionTimeMap.put(Objects.requireNonNull(key), explainList)
@@ -58,7 +59,7 @@ class SourceCodeIndexReport {
     }
 
     void addSequenceScan(Double key, PostgresExplain value) {
-        List<PostgresExplain> explainList = sequenceScanMap.get(key)
+        List<ExplainResult> explainList = sequenceScanMap.get(key)
         if (explainList == null) {
             explainList = new ArrayList<>()
             sequenceScanMap.put(Objects.requireNonNull(key), explainList)
@@ -66,32 +67,32 @@ class SourceCodeIndexReport {
         explainList.add(Objects.requireNonNull(value))
     }
 
-    TreeMap<Double, List<PostgresExplain>> getTotalCostMap() {
-        def map = new TreeMap<Double, List<PostgresExplain>>()
+    TreeMap<Double, List<ExplainResult>> getTotalCostMap() {
+        def map = new TreeMap<Double, List<ExplainResult>>()
         map.putAll(totalCostMap)
         return map
     }
 
-    TreeMap<Double, List<PostgresExplain>> getStartupCostMap() {
-        def map = new TreeMap<Double, List<PostgresExplain>>()
+    TreeMap<Double, List<ExplainResult>> getStartupCostMap() {
+        def map = new TreeMap<Double, List<ExplainResult>>()
         map.putAll(startupCostMap)
         return map
     }
 
-    TreeMap<Double, List<PostgresExplain>> getTotalRuntimeMap() {
-        def map = new TreeMap<Double, List<PostgresExplain>>()
+    TreeMap<Double, List<ExplainResult>> getTotalRuntimeMap() {
+        def map = new TreeMap<Double, List<ExplainResult>>()
         map.putAll(totalRuntimeMap)
         return map
     }
 
-    TreeMap<Double, List<PostgresExplain>> getExecutionTimeMap() {
-        def map = new TreeMap<Double, List<PostgresExplain>>()
+    TreeMap<Double, List<ExplainResult>> getExecutionTimeMap() {
+        def map = new TreeMap<Double, List<ExplainResult>>()
         map.putAll(executionTimeMap)
         return map
     }
 
-    TreeMap<Double, List<PostgresExplain>> getSequenceScanMap() {
-        def map = new TreeMap<Double, List<PostgresExplain>>()
+    TreeMap<Double, List<ExplainResult>> getSequenceScanMap() {
+        def map = new TreeMap<Double, List<ExplainResult>>()
         map.putAll(sequenceScanMap)
         return map
     }

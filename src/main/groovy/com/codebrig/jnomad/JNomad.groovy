@@ -34,6 +34,7 @@ class JNomad {
     private List<String> dbUsername
     private List<String> dbPassword
     private List<String> dbDatabase
+    private String databaseType = "PostgreSQL"
     private boolean queryExplainAnalyze
     private int offenderReportPercentage = 10
     private int indexPriorityThreshold = 50
@@ -231,6 +232,14 @@ class JNomad {
             dbDatabase = new ArrayList<>()
         }
         return dbDatabase
+    }
+
+    String getDatabaseType() {
+        return databaseType
+    }
+
+    void setDatabaseType(String databaseType) {
+        this.databaseType = databaseType
     }
 
     SourceCodeTypeSolver getTypeSolver() {

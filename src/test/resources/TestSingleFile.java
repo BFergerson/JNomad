@@ -3,7 +3,8 @@ import javax.persistence.Query;
 
 /**
 create table table_b (
-    a varchar
+    a varchar(255),
+    column_c varchar(255)
 );
 */
 public class TestSingleFile {

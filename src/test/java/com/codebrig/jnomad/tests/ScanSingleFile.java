@@ -3,6 +3,7 @@ package com.codebrig.jnomad.tests;
 import com.codebrig.jnomad.JNomad;
 import com.codebrig.jnomad.SourceCodeTypeSolver;
 import com.codebrig.jnomad.model.*;
+import com.codebrig.jnomad.task.explain.adapter.DatabaseAdapterType;
 import com.github.javaparser.Range;
 
 import java.io.File;
@@ -45,8 +46,8 @@ public class ScanSingleFile {
         //db access
         jNomad.getDbHost().add("localhost");
         jNomad.getDbDatabase().add("test");
-        jNomad.getDbUsername().add("postgres");
-        jNomad.getDbPassword().add("postgres");
+        jNomad.getDbUsername().add("root");
+        jNomad.getDbPassword().add("");
 
         //so it will recommend an index on everything and report on everything (for testing)
         jNomad.setIndexPriorityThreshold(0);
@@ -60,7 +61,7 @@ public class ScanSingleFile {
         //output results
         System.out.println("\nFound query/queries: " + extract.getQueryLiteralExtractor().getQueryFound());
         if (extract.getQueryLiteralExtractor().getQueryFound()) {
-            FileFullReport fileFullReport = new FileFullReport(scanFile, jNomad);
+            FileFullReport fileFullReport = new FileFullReport(scanFile, jNomad, DatabaseAdapterType.MYSQL);
 
             System.out.println("\nQuery scores:");
             for (QueryScore queryScore : fileFullReport.getQueryScoreList()) {
@@ -81,6 +82,10 @@ public class ScanSingleFile {
                 for (Map.Entry<File, Range> entry : rIndex.getIndexAffectMap().entrySet()) {
                     System.out.println("\t\tFile: " + entry.getKey() + " - Location: " + entry.getValue());
                 }
+            }
+
+            if (fileFullReport.getRecommendedIndexList().isEmpty()) {
+                System.out.println("There are no available query index recommendations. Good job!");
             }
         }
     }

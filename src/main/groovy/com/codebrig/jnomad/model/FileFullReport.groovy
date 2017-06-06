@@ -1,8 +1,11 @@
 package com.codebrig.jnomad.model
 
 import com.codebrig.jnomad.JNomad
-import com.codebrig.jnomad.task.explain.DatabaseDataType
+import com.codebrig.jnomad.task.explain.ExplainResult
 import com.codebrig.jnomad.task.explain.QueryIndexReport
+import com.codebrig.jnomad.task.explain.adapter.DatabaseAdapterType
+import com.codebrig.jnomad.task.explain.adapter.mysql.MysqlQueryReport
+import com.codebrig.jnomad.task.explain.adapter.postgres.MysqlDatabaseDataType
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresDatabaseDataType
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresExplain
 import com.codebrig.jnomad.task.explain.adapter.postgres.PostgresQueryReport
@@ -14,30 +17,51 @@ import org.apache.commons.math3.util.Precision
 /**
  * @author Brandon Fergerson <brandon.fergerson@codebrig.com>
  */
-public class FileFullReport {
+class FileFullReport {
 
     private final File file
     private final List<QueryScore> queryScoreList
     private final List<RecommendedIndex> recommendedIndexList
     private final QueryIndexReport queryIndexReport
 
-    public FileFullReport(File file, JNomad jNomad) {
+    FileFullReport(File file, JNomad jNomad, DatabaseAdapterType adapterType) {
         this.file = file
         queryScoreList = new ArrayList<>()
         recommendedIndexList = new ArrayList<>()
 
         QueryParser queryParser = new QueryParser(jNomad)
         queryParser.run()
-        queryIndexReport = new PostgresQueryReport(jNomad, new PostgresDatabaseDataType(), queryParser.aliasMap)
+
+        switch (adapterType) {
+            case DatabaseAdapterType.POSTGRES:
+                queryIndexReport = new PostgresQueryReport(jNomad, new PostgresDatabaseDataType(), queryParser.aliasMap)
+                break
+            case DatabaseAdapterType.MYSQL:
+                queryIndexReport = new MysqlQueryReport(jNomad, new MysqlDatabaseDataType(), queryParser.aliasMap)
+                break
+            default:
+                throw new RuntimeException("Invalid database adapter type!")
+        }
+
         SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport(jNomad.scannedFileList)
         reportQueriesTask(jNomad, report)
     }
 
-    public FileFullReport(File file, JNomad jNomad, PostgresDatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap, List<SourceCodeExtract> scannedFileList) {
+    FileFullReport(File file, JNomad jNomad, PostgresDatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap, List<SourceCodeExtract> scannedFileList) {
         this.file = file
         queryScoreList = new ArrayList<>()
         recommendedIndexList = new ArrayList<>()
         queryIndexReport = new PostgresQueryReport(jNomad, databaseDataType, aliasMap)
+        queryIndexReport.resolveColumnDataTypes(jNomad.scannedFileList)
+        SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport(scannedFileList)
+        reportQueriesTask(jNomad, report)
+    }
+
+    FileFullReport(File file, JNomad jNomad, MysqlDatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap, List<SourceCodeExtract> scannedFileList) {
+        this.file = file
+        queryScoreList = new ArrayList<>()
+        recommendedIndexList = new ArrayList<>()
+        queryIndexReport = new MysqlQueryReport(jNomad, databaseDataType, aliasMap)
         queryIndexReport.resolveColumnDataTypes(jNomad.scannedFileList)
         SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport(scannedFileList)
         reportQueriesTask(jNomad, report)
@@ -72,7 +96,7 @@ public class FileFullReport {
         map.each {
             if (it.key >= jNomad.indexPriorityThreshold) {
                 RecommendedIndex rIndex = new RecommendedIndex()
-                rIndex.indexCreateSQL = "CREATE INDEX ON ${it.value.tableName} (${it.value.toIndex.toString()});"
+                rIndex.indexCreateSQL = "CREATE INDEX idx_${it.value.toIndex.toString()} ON ${it.value.tableName} (${it.value.toIndex.toString()});"
                 rIndex.indexPriority = Precision.round(it.key, 0)
                 rIndex.indexTable = it.value.tableName
                 rIndex.indexCondition = it.value.toIndex.toString()
@@ -81,10 +105,10 @@ public class FileFullReport {
                 //unique query locations this index would likely improve
                 def locationSet = new HashSet<>()
                 it.value.hitList.each {
-                    def literalExtractor = it.postgresExplain.sourceCodeExtract.queryLiteralExtractor
-                    def range = literalExtractor.getQueryCallRange(it.postgresExplain.originalQuery)
+                    def literalExtractor = it.explainResult.sourceCodeExtract.queryLiteralExtractor
+                    def range = literalExtractor.getQueryCallRange(it.explainResult.originalQuery)
                     if (!locationSet.contains(range)) {
-                        rIndex.addToIndexAffectMap(literalExtractor.sourceFile, range, it.postgresExplain.originalQuery)
+                        rIndex.addToIndexAffectMap(literalExtractor.sourceFile, range, it.explainResult.originalQuery)
                     }
                     locationSet.add(range)
                 }
@@ -97,14 +121,18 @@ public class FileFullReport {
     void calculatedExplainPlan(SourceCodeIndexReport indexReport, TreeMap<Double, List<PostgresExplain>> reportMap, DescriptiveStatistics stats) {
         def top = reportMap.pollLastEntry()
         while (top != null) {
-            for (PostgresExplain explain : top.value) {
+            for (ExplainResult explain : top.value) {
                 def val = explain.calculateCostliestNode(Arrays.asList("Nested Loop", "Aggregate"))
-                val.costScore = top.key
-                indexReport.addCalculatedExplainPlan(val, stats)
+                if (val != null) {
+                    val.costScore = top.key
+                    indexReport.addCalculatedExplainPlan(val, stats)
 
-                val = explain.calculateSlowestNode(Arrays.asList("Nested Loop", "Aggregate"))
-                val.costScore = top.key
-                indexReport.addCalculatedExplainPlan(val, stats)
+                    val = explain.calculateSlowestNode(Arrays.asList("Nested Loop", "Aggregate"))
+                    if (val != null) {
+                        val.costScore = top.key
+                        indexReport.addCalculatedExplainPlan(val, stats)
+                    }
+                }
             }
 
             top = reportMap.pollLastEntry()
@@ -116,7 +144,7 @@ public class FileFullReport {
         while (top != null) {
             stats.addValue(top.key)
 
-            for (PostgresExplain explain : top.value) {
+            for (ExplainResult explain : top.value) {
                 QueryScore queryScore = new QueryScore()
                 queryScore.score = top.key
                 queryScore.originalQuery = explain.originalQuery
@@ -136,11 +164,11 @@ public class FileFullReport {
         }
     }
 
-    public File getFile() {
+    File getFile() {
         return file
     }
 
-    public IndexRecommendation getIndexRecommendation() {
+    IndexRecommendation getIndexRecommendation() {
         return indexRecommendation
     }
 

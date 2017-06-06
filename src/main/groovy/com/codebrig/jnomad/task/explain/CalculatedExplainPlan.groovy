@@ -1,4 +1,4 @@
-package com.codebrig.jnomad.task.explain.adapter.postgres
+package com.codebrig.jnomad.task.explain
 
 import com.codebrig.jnomad.utils.HQLQueryWalker
 import net.sf.jsqlparser.expression.Expression
@@ -9,31 +9,31 @@ import net.sf.jsqlparser.statement.Statement
  */
 class CalculatedExplainPlan {
 
-    private final PostgresExplain postgresExplain
+    private final ExplainResult explainResult
     private final double value
-    private final ExplainPlan plan
+    private final ExplainPlan explainPlan
     private final Statement statement
     private Expression nomadValue
     private Object parentToNomadValue
     private double costScore
 
-    CalculatedExplainPlan(PostgresExplain postgresExplain, double value, ExplainPlan plan, Statement statement) {
-        this.postgresExplain = postgresExplain
+    CalculatedExplainPlan(ExplainResult explainResult, double value, ExplainPlan explainPlan, Statement statement) {
+        this.explainResult = explainResult
         this.value = value
-        this.plan = plan
+        this.explainPlan = explainPlan
         this.statement = statement
     }
 
-    PostgresExplain getPostgresExplain() {
-        return postgresExplain
+    ExplainResult getExplainResult() {
+        return explainResult
     }
 
     double getValue() {
         return value
     }
 
-    ExplainPlan getPlan() {
-        return plan
+    ExplainPlan getExplainPlan() {
+        return explainPlan
     }
 
     Statement getStatement() {

@@ -14,7 +14,7 @@ class RecommendedIndex {
     private final Map<File, Range> indexAffectMap
     private final Set<String> indexAffectOriginalQuerySet
 
-    public RecommendedIndex() {
+    RecommendedIndex() {
         indexAffectMap = new HashMap<>()
         indexAffectOriginalQuerySet = new HashSet<>()
     }
