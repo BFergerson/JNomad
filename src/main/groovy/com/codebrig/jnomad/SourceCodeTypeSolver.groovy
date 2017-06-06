@@ -64,7 +64,8 @@ class SourceCodeTypeSolver extends CombinedTypeSolver {
                 String className = compilationUnit.getPackage().get().getName().getQualifiedName() + "." + astTypeDeclaration.get().getNameExpr().getQualifiedName()
                 definedClassNameList.add(className)
                 definedSourceCodeClassNameList.add(className)
-            } catch (FileNotFoundException ex) {
+            } catch (Exception ex) {
+                println "Failed to load source code file: " + f.absolutePath
                 ex.printStackTrace()
             }
         }

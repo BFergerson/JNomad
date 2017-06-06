@@ -394,7 +394,7 @@ class JNomadCLI {
         def map = indexReport.indexRecommendation.indexHitMapTreeMap.descendingMap()
         map.each {
             if (it.key >= jNomad.indexPriorityThreshold) {
-                println "\nIndex: " + "CREATE INDEX ON ${it.value.tableName} (${it.value.toIndex.toString()});"
+                println "\nIndex: " + "CREATE INDEX idx_${it.value.toIndex.toString()} ON ${it.value.tableName} (${it.value.toIndex.toString()});"
                 println "\tIndex Priority: " + Precision.round(it.key, 0)
                 println "\tIndex Table: " + it.value.tableName
                 println "\tIndex Condition: " + it.value.toIndex.toString()

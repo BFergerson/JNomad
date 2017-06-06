@@ -35,14 +35,9 @@ dependencies {
 
 task uberJar(type: Jar, dependsOn:[':compileJava',':compileGroovy']) {
     //remove the security files so the jar will be executable
-    doFirst {
-        from (configurations.runtime.resolve().collect { it.isDirectory() ? it : zipTree(it) }) {
-            exclude 'META-INF/MANIFEST.MF'
-            exclude 'META-INF/*.SF'
-            exclude 'META-INF/*.DSA'
-            exclude 'META-INF/*.RSA'
-        }
-    }
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
 
     from files(sourceSets.main.output)
     from configurations.runtime.asFileTree.files.collect { zipTree(it) }

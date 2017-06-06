@@ -5,12 +5,12 @@ import com.codebrig.jnomad.task.extract.SourceCodeExtractRunner
 import com.codebrig.jnomad.task.extract.extractor.query.*
 import com.codebrig.jnomad.utils.CodeLocator
 import com.github.javaparser.JavaParser
-import com.github.javaparser.symbolsolver.model.resolution.TypeSolver
+import com.google.common.io.Files
+import com.google.common.io.Resources
 import com.google.common.util.concurrent.Runnables
 import org.mapdb.DB
 import org.mapdb.DBMaker
 
-import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -47,11 +47,16 @@ class JNomad {
     JNomad(SourceCodeTypeSolver typeSolver) {
         this.typeSolver = typeSolver
 
+        URL javaEEUrl = null
         try {
             //todo: improve this whole block
             //add JavaEE API to type solver
             def domain = JNomad.class.getProtectionDomain()
-            URL javaEEUrl = domain.getClassLoader().getResource("/javaee-api-7.0.jar")
+            javaEEUrl = domain.getClassLoader().getResource("javaee-api-7.0.jar")
+            if (javaEEUrl == null) {
+                javaEEUrl = domain.getClassLoader().getResource("/javaee-api-7.0.jar")
+            }
+
             if (javaEEUrl != null) {
                 def path = javaEEUrl.toString().replace("%20", " ")
                 if (path.startsWith("file:/")) {
@@ -71,7 +76,15 @@ class JNomad {
                 }
             }
         } catch (Exception ex) {
-            //todo: better
+            if (javaEEUrl != null) {
+                //fall back to extracting the javaee-api-7.0.jar and use that
+                byte[] bytes = Resources.toByteArray(javaEEUrl)
+                File tmpFile = new File(System.getProperty("java.io.tmpdir"), "javaee-api-7.0.jar")
+                Files.write(bytes, tmpFile)
+                typeSolver.addJarTypeSolver(tmpFile.absolutePath)
+            } else {
+                ex.printStackTrace()
+            }
         }
     }
 
@@ -119,7 +132,7 @@ class JNomad {
         if (cache != null) cache.close()
     }
 
-    public SourceCodeExtract scanSingleFile(File file) {
+    SourceCodeExtract scanSingleFile(File file) {
         def compilationUnit = JavaParser.parse(file)
         def queryLiteral = new QueryLiteralExtractor(compilationUnit, file, typeSolver, cache)
         def queryTable = new QueryTableAliasExtractor(compilationUnit, file, typeSolver, cache)
