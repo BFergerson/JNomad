@@ -17,6 +17,7 @@ http://www.codebrig.com/public_files/JNomad/JNomadCLI.zip
 -db_database               Database name
 -db_host                   Database host (Use : to specify host (ex. localhost:5432) [default = 5432])
 -db_password               Database password
+-db_type                   Database type (Supported: PostgreSQL, MySQL) (default: PostgreSQL)
 -db_username               Database username
 -f, -log_file              Log console output to specified file
 -help, --help              Displays help information (default: false)
