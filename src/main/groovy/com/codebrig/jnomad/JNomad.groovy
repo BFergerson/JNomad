@@ -35,7 +35,7 @@ class JNomad {
     private List<String> dbPassword
     private List<String> dbDatabase
     private String databaseType = "PostgreSQL"
-    private boolean queryExplainAnalyze
+    private boolean queryExplainAnalyze = true
     private int offenderReportPercentage = 10
     private int indexPriorityThreshold = 50
     private SourceCodeTypeSolver typeSolver
