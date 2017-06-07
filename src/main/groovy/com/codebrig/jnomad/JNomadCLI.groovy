@@ -114,7 +114,7 @@ class JNomadCLI {
 
     static void main(String[] args) {
         JNomadCLI main = new JNomadCLI()
-        def commander = null
+        def commander
         try {
             commander = new JCommander(main, args)
             commander.programName = "JNomadCLI"
