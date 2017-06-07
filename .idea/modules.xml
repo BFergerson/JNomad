@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/JNomad.iml" filepath="$PROJECT_DIR$/.idea/modules/JNomad.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/JNomad_main.iml" filepath="$PROJECT_DIR$/.idea/modules/JNomad_main.iml" group="JNomad" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/JNomad_test.iml" filepath="$PROJECT_DIR$/.idea/modules/JNomad_test.iml" group="JNomad" />
+    </modules>
+  </component>
+</project>
