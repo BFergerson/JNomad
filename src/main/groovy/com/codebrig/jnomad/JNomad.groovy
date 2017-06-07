@@ -94,7 +94,10 @@ class JNomad {
             try {
                 cache = DBMaker.fileDB(System.getProperty("java.io.tmpdir") + "jnomad.cache").make() //todo: configurable cache
             } catch(Exception e) {
-                new File(System.getProperty("java.io.tmpdir") + "jnomad.cache").delete()
+                File cacheFile = new File(System.getProperty("java.io.tmpdir") + "jnomad.cache")
+                if (!cacheFile.delete()) {
+                    cacheFile.deleteOnExit()
+                }
                 cache = DBMaker.fileDB(System.getProperty("java.io.tmpdir") + "jnomad.cache").make() //todo: configurable cache
             }
         }
@@ -129,7 +132,10 @@ class JNomad {
             e.printStackTrace()
         }
 
-        if (cache != null) cache.close()
+        if (cache != null) {
+            cache.close() //save and re-open (flushes data to disk)
+            cache = DBMaker.fileDB(System.getProperty("java.io.tmpdir") + "jnomad.cache").make() //todo: configurable cache
+        }
     }
 
     SourceCodeExtract scanSingleFile(File file) {
@@ -168,6 +174,12 @@ class JNomad {
                     }
                 }
             }
+        }
+    }
+
+    void closeCache() {
+        if (cache != null) {
+            cache.close()
         }
     }
 
