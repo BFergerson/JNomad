@@ -157,6 +157,7 @@ class JNomadCLI {
         def indexReport = explainQueriesTask(jNomad, queryParser.aliasMap, DatabaseAdapterType.fromString(main.databaseType))
         reportQueriesTask(jNomad, indexReport)
 
+        jNomad.closeCache()
         println "${breaker()}JNomad {${JNOMAD_VERSION}}: All tasks finished!\n\t\t - Total runtime: ${getRuntime(startTime)}${breaker()}"
     }
 
