@@ -158,7 +158,9 @@ class JNomad {
         File tempFile = File.createTempFile("jnomad-java", Long.toString(System.currentTimeMillis()))
         tempFile.deleteOnExit()
         IOUtils.copy(fileStream, new FileOutputStream(tempFile))
-        return scanSingleFile(tempFile)
+        SourceCodeExtract extract = scanSingleFile(tempFile)
+        tempFile.delete()
+        return extract
     }
 
     private Runnable scanFile(final File f) {
