@@ -8,6 +8,7 @@ import com.github.javaparser.JavaParser
 import com.google.common.io.Files
 import com.google.common.io.Resources
 import com.google.common.util.concurrent.Runnables
+import org.apache.commons.io.IOUtils
 import org.mapdb.DB
 import org.mapdb.DBMaker
 
@@ -151,6 +152,13 @@ class JNomad {
         sourceCodeVisitor.scan(compilationUnit)
         scannedFileList.add(sourceCodeVisitor.sourceCodeExtract)
         return sourceCodeVisitor.sourceCodeExtract
+    }
+
+    SourceCodeExtract scanSingleFile(InputStream fileStream) {
+        File tempFile = File.createTempFile("jnomad-java", Long.toString(System.currentTimeMillis()))
+        tempFile.deleteOnExit()
+        IOUtils.copy(fileStream, new FileOutputStream(tempFile))
+        return scanSingleFile(tempFile)
     }
 
     private Runnable scanFile(final File f) {
