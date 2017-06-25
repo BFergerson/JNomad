@@ -68,7 +68,12 @@ class MysqlQueryReport extends QueryIndexReport  {
             System.err.println(ex.getClass().getName() + ": " + ex.getMessage())
             System.exit(0)
         }
+        return createSourceCodeIndexReport(scannedFileList, connectionList.toArray(new Connection[0]))
+    }
 
+    @Override
+    SourceCodeIndexReport createSourceCodeIndexReport(List<SourceCodeExtract> scannedFileList, Connection... connections) {
+        List<Connection> connectionList = Arrays.asList(connections)
         try {
             resolveColumnDataTypes(scannedFileList)
             for (SourceCodeExtract extract : scannedFileList) {

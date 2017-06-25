@@ -4,6 +4,8 @@ import com.codebrig.jnomad.JNomad
 import com.codebrig.jnomad.model.SourceCodeExtract
 import com.codebrig.jnomad.model.SourceCodeIndexReport
 
+import java.sql.Connection
+
 /**
  * @author Brandon Fergerson <brandon.fergerson@codebrig.com>
  */
@@ -57,6 +59,8 @@ abstract class QueryIndexReport {
     abstract DatabaseDataType getDatabaseDataType()
 
     abstract SourceCodeIndexReport createSourceCodeIndexReport(List<SourceCodeExtract> scannedFileList)
+
+    abstract SourceCodeIndexReport createSourceCodeIndexReport(List<SourceCodeExtract> scannedFileList, Connection... dbConnections)
 
     abstract String getSQLTableName(String tableName)
 

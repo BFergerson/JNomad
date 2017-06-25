@@ -4,7 +4,6 @@ import com.codebrig.jnomad.JNomad
 import com.codebrig.jnomad.model.SourceCodeExtract
 import com.codebrig.jnomad.model.SourceCodeIndexReport
 import com.codebrig.jnomad.task.parse.QueryEntityAliasMap
-import com.codebrig.jnomad.task.explain.DatabaseDataType
 import com.codebrig.jnomad.task.explain.QueryIndexReport
 import com.codebrig.jnomad.task.explain.transform.hql.*
 import com.codebrig.jnomad.utils.CodeLocator
@@ -64,7 +63,12 @@ class PostgresQueryReport extends QueryIndexReport {
             System.err.println(ex.getClass().getName() + ": " + ex.getMessage())
             System.exit(0)
         }
+        return createSourceCodeIndexReport(scannedFileList, connectionList.toArray(new Connection[0]))
+    }
 
+    @Override
+    SourceCodeIndexReport createSourceCodeIndexReport(List<SourceCodeExtract> scannedFileList, Connection... connections) {
+        List<Connection> connectionList = Arrays.asList(connections)
         try {
             resolveColumnDataTypes(scannedFileList)
             for (SourceCodeExtract extract : scannedFileList) {
