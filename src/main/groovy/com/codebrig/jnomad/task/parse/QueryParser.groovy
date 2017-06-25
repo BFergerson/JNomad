@@ -39,13 +39,15 @@ class QueryParser {
     private Map<String, TableRank> tableRankSet
     private List<SourceCodeExtract> scannedFileList
     private SourceCodeTypeSolver typeSolver
+    private Map<String, SourceCodeExtract> failedQueries
 
     private int parsedQueryCount = 0
     private int failedQueryCount = 0
 
-    public QueryParser(JNomad jNomad) {
+    QueryParser(JNomad jNomad) {
         this.scannedFileList = jNomad.scannedFileList
         this.typeSolver = jNomad.getTypeSolver()
+        this.failedQueries = new HashMap<>()
     }
 
     def run() {
@@ -59,8 +61,9 @@ class QueryParser {
     }
 
     def run(List<SourceCodeExtract> scannedFileList) {
-        staticExprMap.clear();
-        dynamicExprMap.clear();
+        staticExprMap.clear()
+        dynamicExprMap.clear()
+        failedQueries.clear()
 
         def map = new HashMap<String, SourceCodeExtract>()
         for (SourceCodeExtract visitor : scannedFileList) {
@@ -276,12 +279,14 @@ class QueryParser {
                 }
                 result.extract.addParsedQuery(deleteStatement, originalQuery)
             } else {
-                println "Skipped parsing query: " + statement
-                println "\tSource code file: " + result.extract.queryLiteralExtractor.getClassName()
+                failedQueries.put(originalQuery, result.extract)
                 failedQueryCount++
                 parsedQueryCount--
+                println "Skipped parsing query: " + statement
+                println "\tSource code file: " + result.extract.queryLiteralExtractor.getClassName()
             }
         } catch (Throwable ex) {
+            failedQueries.put(originalQuery, result.extract)
             failedQueryCount++
             parsedQueryCount--
             println "Failed to parse query: " + originalQuery.replace("\"", "")
@@ -295,6 +300,10 @@ class QueryParser {
 
     int getFailedQueryCount() {
         return failedQueryCount
+    }
+
+    Map<String, SourceCodeExtract> getFailedQueries() {
+        return failedQueries
     }
 
     int getTotalStaticQueryCount() {

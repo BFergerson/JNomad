@@ -26,6 +26,7 @@
     <orderEntry type="library" name="Gradle: org.postgresql:postgresql:9.4.1212.jre7" level="project" />
     <orderEntry type="library" name="Gradle: mysql:mysql-connector-java:6.0.6" level="project" />
     <orderEntry type="library" name="Gradle: org.mapdb:mapdb:3.0.2" level="project" />
+    <orderEntry type="library" name="Gradle: commons-io:commons-io:2.5" level="project" />
     <orderEntry type="library" name="Gradle: com.github.javaparser:java-symbol-solver-model:0.3.2" level="project" />
     <orderEntry type="library" name="Gradle: com.github.javaparser:java-symbol-solver-logic:0.3.2" level="project" />
     <orderEntry type="library" name="Gradle: com.fasterxml.jackson.core:jackson-databind:2.6.5" level="project" />
