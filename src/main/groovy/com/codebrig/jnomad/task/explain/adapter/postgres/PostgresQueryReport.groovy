@@ -37,11 +37,6 @@ class PostgresQueryReport extends QueryIndexReport {
         super(jNomad)
         this.databaseDataType = Objects.requireNonNull(databaseDataType)
         this.aliasMap = Objects.requireNonNull(aliasMap)
-
-        if (jNomad.dbDatabase.isEmpty() || jNomad.dbHost.isEmpty()
-                || jNomad.dbUsername.isEmpty() || jNomad.dbPassword.isEmpty()) {
-            throw new RuntimeException("Postgres database access was not provided!")
-        }
     }
 
     @Override
@@ -68,6 +63,10 @@ class PostgresQueryReport extends QueryIndexReport {
 
     @Override
     SourceCodeIndexReport createSourceCodeIndexReport(List<SourceCodeExtract> scannedFileList, Connection... connections) {
+        if (connections == null || connections.length == 0) {
+            throw new RuntimeException("Postgres database access was not provided!")
+        }
+
         List<Connection> connectionList = Arrays.asList(connections)
         try {
             resolveColumnDataTypes(scannedFileList)

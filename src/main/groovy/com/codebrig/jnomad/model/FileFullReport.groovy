@@ -1,6 +1,7 @@
 package com.codebrig.jnomad.model
 
 import com.codebrig.jnomad.JNomad
+import com.codebrig.jnomad.task.explain.DatabaseDataType
 import com.codebrig.jnomad.task.explain.ExplainResult
 import com.codebrig.jnomad.task.explain.QueryIndexReport
 import com.codebrig.jnomad.task.explain.adapter.DatabaseAdapterType
@@ -13,6 +14,8 @@ import com.codebrig.jnomad.task.parse.QueryEntityAliasMap
 import com.codebrig.jnomad.task.parse.QueryParser
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics
 import org.apache.commons.math3.util.Precision
+
+import java.sql.Connection
 
 /**
  * @author Brandon Fergerson <brandon.fergerson@codebrig.com>
@@ -47,23 +50,34 @@ class FileFullReport {
         reportQueriesTask(jNomad, report)
     }
 
-    FileFullReport(File file, JNomad jNomad, PostgresDatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap, List<SourceCodeExtract> scannedFileList) {
+    FileFullReport(File file, JNomad jNomad, DatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap, List<SourceCodeExtract> scannedFileList) {
         this.file = file
         queryScoreList = new ArrayList<>()
         recommendedIndexList = new ArrayList<>()
-        queryIndexReport = new PostgresQueryReport(jNomad, databaseDataType, aliasMap)
+        if (databaseDataType instanceof PostgresDatabaseDataType) {
+            queryIndexReport = new PostgresQueryReport(jNomad, (PostgresDatabaseDataType) databaseDataType, aliasMap)
+        } else if (databaseDataType instanceof MysqlDatabaseDataType) {
+            queryIndexReport = new MysqlQueryReport(jNomad, (MysqlDatabaseDataType) databaseDataType, aliasMap)
+        }
+
         queryIndexReport.resolveColumnDataTypes(jNomad.scannedFileList)
         SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport(scannedFileList)
         reportQueriesTask(jNomad, report)
     }
 
-    FileFullReport(File file, JNomad jNomad, MysqlDatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap, List<SourceCodeExtract> scannedFileList) {
+    FileFullReport(File file, JNomad jNomad, DatabaseDataType databaseDataType, QueryEntityAliasMap aliasMap,
+                   List<SourceCodeExtract> scannedFileList, Connection... dbConnections) {
         this.file = file
         queryScoreList = new ArrayList<>()
         recommendedIndexList = new ArrayList<>()
-        queryIndexReport = new MysqlQueryReport(jNomad, databaseDataType, aliasMap)
+        if (databaseDataType instanceof PostgresDatabaseDataType) {
+            queryIndexReport = new PostgresQueryReport(jNomad, (PostgresDatabaseDataType) databaseDataType, aliasMap)
+        } else if (databaseDataType instanceof MysqlDatabaseDataType) {
+            queryIndexReport = new MysqlQueryReport(jNomad, (MysqlDatabaseDataType) databaseDataType, aliasMap)
+        }
+
         queryIndexReport.resolveColumnDataTypes(jNomad.scannedFileList)
-        SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport(scannedFileList)
+        SourceCodeIndexReport report = queryIndexReport.createSourceCodeIndexReport(scannedFileList, dbConnections)
         reportQueriesTask(jNomad, report)
     }
 
