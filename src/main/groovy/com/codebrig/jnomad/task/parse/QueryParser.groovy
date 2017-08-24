@@ -300,7 +300,6 @@ class QueryParser {
             parsedQueryCount--
             println "Failed to parse query: " + originalQuery.replace("\"", "") + "; Reason: " + ex.getMessage()
             println "\tSource code file: " + result.extract.queryLiteralExtractor.getClassName()
-            ex.printStackTrace()
         }
     }
 
