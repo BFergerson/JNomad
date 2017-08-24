@@ -14,7 +14,6 @@ abstract class QueryIndexReport {
     private final JNomad jNomad
     private final List<String> allQueryList = new ArrayList<>()
     private final List<String> successfullyExplainedQueryList = new ArrayList<>()
-    private final List<String> emptyWhereClauseList = new ArrayList<>()
     private final List<String> missingRequiredTableList = new ArrayList<>()
     private final List<String> missingRequiredColumnList = new ArrayList<>()
     private final List<String> permissionDeniedTableList = new ArrayList<>()
@@ -33,11 +32,7 @@ abstract class QueryIndexReport {
     }
 
     List<String> getSuccessfullyExplainedQueryList() {
-        return successfullyExplainedQueryList;
-    }
-
-    List<String> getEmptyWhereClauseList() {
-        return emptyWhereClauseList
+        return successfullyExplainedQueryList
     }
 
     List<String> getMissingRequiredTableList() {

@@ -85,10 +85,6 @@ class PostgresQueryReport extends QueryIndexReport {
                         statement.accept(new HQLColumnValueTransformer(this))
 
                         query = QueryCleaner.cleanQueryExecute(statement.toString())
-                        if (!query.toLowerCase().contains(" where ")) {
-                            emptyWhereClauseList.add(query)
-                            continue
-                        }
                     } catch (HQLTransformException ex) {
                         println ex.getMessage()
                         println "\tSource code file: " + extract.queryLiteralExtractor.getClassName()
